@@ -2,7 +2,7 @@
 
 ![Innobytes Backend Banner]
 <p align="center">
-  <img src="backend/assets/banner.png" width="900" />
+  <img src="Backend/assets/banner.png" width="900" />
 </p>
 
 
