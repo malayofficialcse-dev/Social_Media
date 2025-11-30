@@ -1,6 +1,10 @@
 # Innobytes Backend API
 
-![Innobytes Backend Banner](assets/banner.png)
+![Innobytes Backend Banner]
+<p align="center">
+  <img src="assets/banner.png" width="900" />
+</p>
+
 
 > A robust, secure, and scalable RESTful API built with Node.js, Express, and MongoDB.
 
