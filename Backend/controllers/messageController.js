@@ -28,13 +28,7 @@ export const sendMessage = asyncHandler(async (req, res) => {
     message = await message.populate("sender", "username profileImage");
     message = await message.populate("receiver", "username profileImage");
 
-    // Create notification for receiver
-    await Notification.create({
-      recipient: receiverId,
-      sender: req.user._id,
-      type: 'message',
-      message: content ? content.substring(0, 50) : 'Sent you an image',
-    });
+    // Don't create notification here - let Socket.io handle it based on user's active chat status
 
     res.json(message);
   } catch (error) {

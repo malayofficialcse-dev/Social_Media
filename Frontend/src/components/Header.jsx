@@ -43,7 +43,7 @@ const Header = () => {
           >
             <FaBars size={24} />
           </button>
-          <Link to="/" className="text-xl md:text-2xl font-bold text-accent shrink-0">Innobytes</Link>
+          <Link to="/" className="text-xl md:text-2xl font-bold text-accent shrink-0">P Connect</Link>
         </div>
         
         {/* Search Bar (Desktop) */}
