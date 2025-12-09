@@ -6,6 +6,8 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 
+const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=User&background=1e293b&color=fff&size=200';
+
 const PostCard = ({ post, onDelete, onUpdate }) => {
   const { user } = useAuth();
   const [liked, setLiked] = useState(post.likes.includes(user?._id));
@@ -16,9 +18,30 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
   const [editContent, setEditContent] = useState(post.content);
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [comments, setComments] = useState([]);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount || 0);
+  const [loadingComments, setLoadingComments] = useState(false);
 
   const isOwner = user?._id === post.author_id._id;
+
+  const fetchComments = async () => {
+    setLoadingComments(true);
+    try {
+      const { data } = await api.get(`/comments/${post._id}`);
+      setComments(data);
+      setCommentsCount(data.length);
+    } catch (error) {
+      console.error("Error fetching comments", error);
+    }
+    setLoadingComments(false);
+  };
+
+  const toggleComments = () => {
+    if (!showComments && comments.length === 0) {
+      fetchComments();
+    }
+    setShowComments(!showComments);
+  };
 
   const handleComment = async (e) => {
     e.preventDefault();
@@ -26,10 +49,9 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
 
     try {
       await api.post(`/comments/${post._id}`, { content: commentText });
-      setCommentsCount(prev => prev + 1);
       setCommentText('');
       toast.success("Comment added!");
-      // Optionally fetch comments to display them, but for now just increment count
+      fetchComments(); // Refresh comments after adding
     } catch (error) {
       toast.error(error.response?.data?.message || "Error adding comment");
     }
@@ -168,7 +190,7 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
             </button>
             
             <button 
-              onClick={() => setShowComments(!showComments)}
+              onClick={toggleComments}
               className="flex items-center gap-2 hover:text-accent transition-colors"
             >
               <FaComment />
@@ -186,7 +208,7 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
 
           {showComments && (
             <div className="mt-4 border-t border-slate-800 pt-4">
-              <form onSubmit={handleComment} className="flex gap-2">
+              <form onSubmit={handleComment} className="flex gap-2 mb-4">
                 <input
                   type="text"
                   value={commentText}
@@ -202,6 +224,41 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
                   Post
                 </button>
               </form>
+
+              {/* Comments List */}
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {loadingComments ? (
+                  <p className="text-center text-slate-500 text-sm">Loading comments...</p>
+                ) : comments.length > 0 ? (
+                  comments.map((comment) => (
+                    <div key={comment._id} className="flex gap-3 bg-slate-800/50 rounded-lg p-3">
+                      <Link to={`/profile/${comment.author_id._id}`}>
+                        <img 
+                          src={comment.author_id.profileImage || DEFAULT_AVATAR} 
+                          alt={comment.author_id.username}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                      </Link>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Link 
+                            to={`/profile/${comment.author_id._id}`}
+                            className="font-medium text-white hover:underline text-sm"
+                          >
+                            {comment.author_id.username}
+                          </Link>
+                          <span className="text-xs text-slate-500">
+                            {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                          </span>
+                        </div>
+                        <p className="text-slate-300 text-sm mt-1">{comment.content}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-slate-500 text-sm">No comments yet. Be the first to comment!</p>
+                )}
+              </div>
             </div>
           )}
         </div>

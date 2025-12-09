@@ -101,6 +101,15 @@ app.use("/api/messages", messageRoutes);
 // Global Error Handler
 app.use(errorHandler);
 
+app.get("/health", (req, res) => {
+  res.json({ 
+    status: "OK", 
+    message: "Server is running",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 app.get("/", (req, res) => {
   res.send("Blog API Running with Validation & Error Handling");
 });
