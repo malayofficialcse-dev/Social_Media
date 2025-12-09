@@ -26,7 +26,7 @@ const io = new Server(httpServer, {
 });
 
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:5174", "https://social-media-vdsn.onrender.com"],
+  origin: ["https://social-media-1-1u50.onrender.com","http://localhost:5173", "http://localhost:5174", "https://social-media-vdsn.onrender.com"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"],
