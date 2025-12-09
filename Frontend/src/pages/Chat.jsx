@@ -2,11 +2,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import api from '../services/api';
-import { FaPaperPlane, FaImage, FaTimes, FaArrowLeft } from 'react-icons/fa';
+import { FaPaperPlane, FaImage, FaTimes, FaArrowLeft, FaSmile } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { formatDistanceToNow } from 'date-fns';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropImage';
+import EmojiPicker from 'emoji-picker-react';
 
 const Chat = () => {
   const { user } = useAuth();
@@ -18,6 +19,7 @@ const Chat = () => {
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef(null);
 
   // Crop State
@@ -407,7 +409,7 @@ const Chat = () => {
                   </button>
                 </div>
               )}
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center relative">
                 <label className="cursor-pointer text-slate-400 hover:text-accent p-2">
                   <FaImage size={20} />
                   <input
@@ -417,6 +419,31 @@ const Chat = () => {
                     className="hidden"
                   />
                 </label>
+                
+                {/* Emoji Picker */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="text-slate-400 hover:text-accent p-2"
+                  >
+                    <FaSmile size={20} />
+                  </button>
+                  {showEmojiPicker && (
+                    <div className="absolute bottom-12 left-0 z-50">
+                      <EmojiPicker
+                        onEmojiClick={(emojiObject) => {
+                          setNewMessage(prev => prev + emojiObject.emoji);
+                          setShowEmojiPicker(false);
+                        }}
+                        theme="dark"
+                        width={300}
+                        height={400}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <input
                   type="text"
                   value={newMessage}

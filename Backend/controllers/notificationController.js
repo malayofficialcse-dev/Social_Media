@@ -84,3 +84,13 @@ export const getUnreadCount = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Clear all notifications
+export const clearAllNotifications = async (req, res) => {
+  try {
+    await Notification.deleteMany({ recipient: req.user._id });
+    res.json({ message: "All notifications cleared" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

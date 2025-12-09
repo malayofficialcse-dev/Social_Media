@@ -49,7 +49,7 @@ const Notifications = () => {
   const clearAllNotifications = async () => {
     if (window.confirm("Are you sure you want to clear all notifications?")) {
       try {
-        await api.delete('/notifications'); // Assuming this endpoint deletes all
+        await api.delete('/notifications/clear-all');
         setNotifications([]);
       } catch (error) {
         console.error("Error clearing notifications", error);
