@@ -14,8 +14,10 @@ const router = express.Router();
 
 // Create Comment with validation
 router.post("/", protect, createCommentValidator, validate, createComment);
+router.post("/:postId", protect, createCommentValidator, validate, createComment);
 
 router.get("/", getComments);
+router.get("/post/:postId", getComments);
 router.get("/:id",protect, getComment);
 router.put("/:id",protect, updateComment);
 router.delete("/:id",protect, deleteComment);

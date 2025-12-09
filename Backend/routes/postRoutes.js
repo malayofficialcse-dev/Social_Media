@@ -4,21 +4,33 @@ import {
   getPosts,
   getPost,
   updatePost,
-  deletePost
+  deletePost,
+  likePost,
+  unlikePost,
+  repostPost,
+  getUserPosts
 } from "../controllers/postController.js";
-
-import { createPostValidator } from "../validators/postValidators.js";
-import { validate } from "../middleware/validate.js";
 import { protect } from "../middleware/authMiddleware.js";
+import { postValidator } from "../validators/postValidators.js";
+import { validate } from "../middleware/validate.js";
+
+import { upload } from "../config/cloudinary.js";
+
 const router = express.Router();
 
-// Create Post with validation
-router.post("/", protect,createPostValidator, validate, createPost);
+router.route("/")
+  .post(protect, upload.single('image'), postValidator, validate, createPost)
+  .get(getPosts);
 
-// CRUD operations
-router.get("/", getPosts);
-router.get("/:id",protect, getPost);
-router.put("/:id", protect,updatePost);
-router.delete("/:id",protect, deletePost);
+router.get("/user/:userId", protect, getUserPosts);
+
+router.route("/:id")
+  .get(getPost)
+  .put(protect, updatePost)
+  .delete(protect, deletePost);
+
+router.put("/:id/like", protect, likePost);
+router.put("/:id/unlike", protect, unlikePost);
+router.post("/:id/repost", protect, repostPost);
 
 export default router;
