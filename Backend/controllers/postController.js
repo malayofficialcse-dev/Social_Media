@@ -6,13 +6,13 @@ import Comment from "../Models/Comment.js";
 export const createPost = async (req, res) => {
   try {
     const { title, content } = req.body;
-    const image = req.file ? req.file.path : "";
+    const images = req.files ? req.files.map(file => file.path) : [];
 
     req.body.author_id = req.user._id;
     const post = await Post.create({
       title,
       content,
-      image,
+      images,
       author_id: req.user._id
     });
     const populatedPost = await Post.findById(post._id)
@@ -194,7 +194,7 @@ export const repostPost = async (req, res) => {
     const repost = await Post.create({
       title: originalPost.title,
       content: originalPost.content,
-      image: originalPost.image,
+      images: originalPost.images,
       author_id: req.user._id,
       isRepost: true,
       originalPost: originalPost._id

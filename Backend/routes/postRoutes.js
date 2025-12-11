@@ -19,7 +19,7 @@ import { upload } from "../config/cloudinary.js";
 const router = express.Router();
 
 router.route("/")
-  .post(protect, upload.single('image'), postValidator, validate, createPost)
+  .post(protect, upload.array('images', 10), postValidator, validate, createPost)
   .get(getPosts);
 
 router.get("/user/:userId", protect, getUserPosts);

@@ -169,11 +169,33 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
             <>
               <h3 className="text-lg font-bold mt-1 mb-2">{displayPost.title}</h3>
               <p className="text-slate-300 whitespace-pre-wrap">{displayPost.content}</p>
-              {displayPost.image && (
+              {displayPost.images && displayPost.images.length > 0 ? (
+                <div className={`grid gap-1 mt-3 rounded-lg overflow-hidden ${
+                  displayPost.images.length === 1 ? 'grid-cols-1' : 
+                  'grid-cols-2'
+                }`}>
+                  {displayPost.images.slice(0, 4).map((img, index) => (
+                    <div key={index} className={`relative ${
+                      displayPost.images.length === 3 && index === 0 ? 'col-span-2' : ''
+                    } ${displayPost.images.length === 1 ? '' : 'h-48'}`}>
+                      <img 
+                        src={img} 
+                        alt={`Post content ${index}`} 
+                        className={`w-full h-full object-cover ${displayPost.images.length === 1 ? 'max-h-[500px]' : ''}`}
+                      />
+                      {displayPost.images.length > 4 && index === 3 && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-xl cursor-pointer">
+                          +{displayPost.images.length - 4}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : displayPost.image && (
                 <img 
                   src={displayPost.image} 
                   alt="Post content" 
-                  className="mt-3 rounded-lg w-full h-auto"
+                  className="mt-3 rounded-lg w-full h-auto max-h-[500px] object-cover"
                   onError={(e) => { e.target.style.display = 'none'; }} 
                 />
               )}

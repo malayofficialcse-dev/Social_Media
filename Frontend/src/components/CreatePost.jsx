@@ -1,34 +1,27 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
-import { FaImage } from 'react-icons/fa';
-import Cropper from 'react-easy-crop';
-import getCroppedImg from '../utils/cropImage';
+import { FaImage, FaTimes } from 'react-icons/fa';
 
 const CreatePost = ({ onPostCreated }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [image, setImage] = useState(null);
+  const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
-  // Crop State
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [rotation, setRotation] = useState(0);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
-  const [imageSrc, setImageSrc] = useState(null);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!content.trim() && !image) return;
+    if (!content.trim() && images.length === 0) return;
 
     setLoading(true);
     const formData = new FormData();
     formData.append('title', title);
     formData.append('content', content);
-    if (image) formData.append('image', image);
+    images.forEach((image) => {
+      formData.append('images', image);
+    });
 
     try {
       const { data } = await api.post('/posts', formData, {
@@ -37,7 +30,7 @@ const CreatePost = ({ onPostCreated }) => {
       onPostCreated(data);
       setTitle('');
       setContent('');
-      setImage(null);
+      setImages([]);
       toast.success("Post created successfully!");
     } catch (error) {
       const message = error.response?.data?.message || error.response?.data?.errors?.join(', ') || "Error creating post";
@@ -47,107 +40,19 @@ const CreatePost = ({ onPostCreated }) => {
     }
   };
 
-  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
-    setCroppedAreaPixels(croppedAreaPixels);
-  }, []);
-
-  const handleFileChange = async (e) => {
+  const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      const imageDataUrl = await readFile(file);
-      setImageSrc(imageDataUrl);
-      setZoom(1);
-      setRotation(0);
-      setCrop({ x: 0, y: 0 });
+      const newImages = Array.from(e.target.files);
+      setImages((prev) => [...prev, ...newImages]);
     }
   };
 
-  const readFile = (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.addEventListener('load', () => resolve(reader.result), false);
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const handleCropSave = async () => {
-    try {
-      const croppedImageBlob = await getCroppedImg(
-        imageSrc,
-        croppedAreaPixels,
-        rotation
-      );
-      
-      const file = new File([croppedImageBlob], 'post-image.jpg', { type: 'image/jpeg' });
-      setImage(file);
-      setImageSrc(null); // Close cropper
-    } catch (e) {
-      console.error(e);
-      toast.error("Error cropping image");
-    }
+  const removeImage = (index) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
     <div className="card mb-6">
-      {/* Image Cropper Modal */}
-      {imageSrc && (
-        <div className="fixed inset-0 z-[60] bg-black/80 flex flex-col items-center justify-center p-4">
-          <div className="relative w-full max-w-2xl h-[60vh] bg-dark rounded-lg overflow-hidden mb-4">
-            <Cropper
-              image={imageSrc}
-              crop={crop}
-              zoom={zoom}
-              rotation={rotation}
-              aspect={4 / 3} // Default aspect ratio for posts, or allow free? Let's stick to 4:3 or free. User said "focus the area", usually implies free or specific. Let's use 4:3 or 16:9. Let's use 4:3 as a safe default.
-              onCropChange={setCrop}
-              onCropComplete={onCropComplete}
-              onZoomChange={setZoom}
-              onRotationChange={setRotation}
-            />
-          </div>
-          <div className="flex flex-col gap-4 w-full max-w-md">
-            <div className="flex gap-4 items-center">
-              <span className="text-white text-sm w-16">Zoom</span>
-              <input
-                type="range"
-                value={zoom}
-                min={1}
-                max={3}
-                step={0.1}
-                onChange={(e) => setZoom(e.target.value)}
-                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
-              />
-            </div>
-            <div className="flex gap-4 items-center">
-              <span className="text-white text-sm w-16">Rotate</span>
-              <input
-                type="range"
-                value={rotation}
-                min={0}
-                max={360}
-                step={1}
-                onChange={(e) => setRotation(e.target.value)}
-                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
-              />
-            </div>
-            <div className="flex justify-between gap-4 mt-2">
-              <button 
-                onClick={() => setImageSrc(null)}
-                className="btn btn-secondary flex-1"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleCropSave}
-                className="btn btn-primary flex-1"
-              >
-                Apply Crop
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="flex gap-4">
         <img 
           src={user?.profileImage || "https://via.placeholder.com/40"} 
@@ -169,31 +74,42 @@ const CreatePost = ({ onPostCreated }) => {
             onChange={(e) => setContent(e.target.value)}
             className="w-full bg-transparent text-white text-lg resize-none focus:outline-none min-h-[100px]"
           />
-          {image && (
-            <div className="relative mt-2">
-              <img src={URL.createObjectURL(image)} alt="Preview" className="max-h-60 rounded-lg" />
-              <button 
-                type="button" 
-                onClick={() => setImage(null)}
-                className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
-              >
-                &times;
-              </button>
+          
+          {images.length > 0 && (
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {images.map((img, index) => (
+                <div key={index} className="relative group">
+                  <img 
+                    src={URL.createObjectURL(img)} 
+                    alt={`Preview ${index}`} 
+                    className="w-full h-40 object-cover rounded-lg"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => removeImage(index)}
+                    className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-red-500 transition-colors"
+                  >
+                    <FaTimes size={12} />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
+
           <div className="flex justify-between items-center mt-2 border-t border-slate-800 pt-3">
             <label className="cursor-pointer text-accent hover:text-accent-hover p-2 rounded-full hover:bg-accent/10 transition-colors">
               <FaImage size={20} />
               <input 
                 type="file" 
                 accept="image/*" 
+                multiple
                 onChange={handleFileChange} 
                 className="hidden" 
               />
             </label>
             <button 
               type="submit" 
-              disabled={loading || (!content.trim() && !image)}
+              disabled={loading || (!content.trim() && images.length === 0)}
               className="btn btn-primary rounded-full px-6 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Posting...' : 'Post'}
