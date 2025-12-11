@@ -20,14 +20,14 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: ["https://social-media-1-1u50.onrender.com", "http://localhost:5173", "http://localhost:5174", "https://social-media-vdsn.onrender.com", "http://localhost:5175", "http://localhost:5176", "http://localhost:5001"],
+    origin: "*", // Allow all origins for socket
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   },
 });
 
 app.use(cors({
-  origin: ["https://social-media-1-1u50.onrender.com", "http://localhost:5173", "http://localhost:5174", "https://social-media-vdsn.onrender.com", "http://localhost:5175", "http://localhost:5176", "http://localhost:5001"],
+  origin: true, // Allow all origins dynamically
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"],

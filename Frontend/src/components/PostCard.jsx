@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
+import ImageLightbox from './ImageLightbox';
 
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=User&background=1e293b&color=fff&size=200';
 
@@ -21,6 +22,10 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
   const [comments, setComments] = useState([]);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount || 0);
   const [loadingComments, setLoadingComments] = useState(false);
+
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const isOwner = user?._id === post.author_id._id;
   const isAdmin = user?.role === 'admin';
@@ -125,6 +130,11 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
     }
   };
 
+  const openLightbox = (index) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
   const displayPost = post.isRepost ? post.originalPost : post;
   
   if (!displayPost) return null; // Handle case where original post is deleted
@@ -200,16 +210,18 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
                   'grid-cols-2'
                 }`}>
                   {displayPost.images.slice(0, 4).map((img, index) => (
-                    <div key={index} className={`relative ${
+                    <div key={index} className={`relative cursor-pointer ${
                       displayPost.images.length === 3 && index === 0 ? 'col-span-2' : ''
-                    } ${displayPost.images.length === 1 ? '' : 'h-48'}`}>
+                    } ${displayPost.images.length === 1 ? '' : 'h-48'}`}
+                    onClick={() => openLightbox(index)}
+                    >
                       <img 
                         src={img} 
                         alt={`Post content ${index}`} 
                         className={`w-full h-full object-cover ${displayPost.images.length === 1 ? 'max-h-[500px]' : ''}`}
                       />
                       {displayPost.images.length > 4 && index === 3 && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-xl cursor-pointer">
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-xl">
                           +{displayPost.images.length - 4}
                         </div>
                       )}
@@ -220,7 +232,8 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
                 <img 
                   src={displayPost.image} 
                   alt="Post content" 
-                  className="mt-3 rounded-lg w-full h-auto max-h-[500px] object-cover"
+                  className="mt-3 rounded-lg w-full h-auto max-h-[500px] object-cover cursor-pointer"
+                  onClick={() => openLightbox(0)}
                   onError={(e) => { e.target.style.display = 'none'; }} 
                 />
               )}
@@ -337,6 +350,13 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
           </div>
         </div>
       </div>
+      {lightboxOpen && (
+        <ImageLightbox
+          images={displayPost.images && displayPost.images.length > 0 ? displayPost.images : [displayPost.image]}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </div>
   );
 };

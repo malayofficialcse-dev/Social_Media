@@ -2,12 +2,18 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 import { FaTrash, FaUser, FaFileAlt, FaComment, FaImage } from 'react-icons/fa';
+import ImageLightbox from '../components/ImageLightbox';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({ totalUsers: 0, totalPosts: 0, totalComments: 0 });
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   useEffect(() => {
     fetchData();
@@ -69,6 +75,12 @@ const AdminDashboard = () => {
         toast.error("Failed to update post");
       }
     }
+  };
+
+  const openLightbox = (images, index = 0) => {
+    setLightboxImages(images);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
   };
 
   if (loading) return <div className="text-center text-white mt-10">Loading Admin Panel...</div>;
@@ -200,16 +212,30 @@ const AdminDashboard = () => {
                     {post.images && post.images.length > 0 ? (
                       <div className="flex gap-1">
                         {post.images.slice(0, 3).map((img, idx) => (
-                          <img key={idx} src={img} alt="Post" className="w-10 h-10 object-cover rounded" />
+                          <img 
+                            key={idx} 
+                            src={img} 
+                            alt="Post" 
+                            className="w-10 h-10 object-cover rounded cursor-pointer hover:opacity-80" 
+                            onClick={() => openLightbox(post.images, idx)}
+                          />
                         ))}
                         {post.images.length > 3 && (
-                          <div className="w-10 h-10 bg-slate-700 rounded flex items-center justify-center text-xs">
+                          <div 
+                            className="w-10 h-10 bg-slate-700 rounded flex items-center justify-center text-xs cursor-pointer hover:bg-slate-600"
+                            onClick={() => openLightbox(post.images, 3)}
+                          >
                             +{post.images.length - 3}
                           </div>
                         )}
                       </div>
                     ) : post.image ? (
-                      <img src={post.image} alt="Post" className="w-10 h-10 object-cover rounded" />
+                      <img 
+                        src={post.image} 
+                        alt="Post" 
+                        className="w-10 h-10 object-cover rounded cursor-pointer hover:opacity-80" 
+                        onClick={() => openLightbox([post.image])}
+                      />
                     ) : (
                       <span className="text-slate-600 text-xs">No images</span>
                     )}
@@ -237,6 +263,14 @@ const AdminDashboard = () => {
           </table>
         </div>
       </div>
+
+      {lightboxOpen && (
+        <ImageLightbox
+          images={lightboxImages}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </div>
   );
 };

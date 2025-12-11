@@ -2,7 +2,8 @@ import { useState } from 'react';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
-import { FaImage, FaTimes } from 'react-icons/fa';
+import { FaImage, FaTimes, FaCrop } from 'react-icons/fa';
+import ImageCropper from './ImageCropper';
 
 const CreatePost = ({ onPostCreated }) => {
   const [title, setTitle] = useState('');
@@ -10,6 +11,10 @@ const CreatePost = ({ onPostCreated }) => {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
+
+  // Cropper state
+  const [editingImageIndex, setEditingImageIndex] = useState(null);
+  const [imageToCrop, setImageToCrop] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,6 +56,30 @@ const CreatePost = ({ onPostCreated }) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const startEditing = (index) => {
+    const image = images[index];
+    setEditingImageIndex(index);
+    setImageToCrop(URL.createObjectURL(image));
+  };
+
+  const handleCropComplete = (croppedBlob) => {
+    // Create a new File object from the blob
+    const originalFile = images[editingImageIndex];
+    const croppedFile = new File([croppedBlob], originalFile.name, {
+      type: originalFile.type,
+      lastModified: Date.now(),
+    });
+
+    // Replace the image in the array
+    const newImages = [...images];
+    newImages[editingImageIndex] = croppedFile;
+    setImages(newImages);
+
+    // Close cropper
+    setEditingImageIndex(null);
+    setImageToCrop(null);
+  };
+
   return (
     <div className="card mb-6">
       <div className="flex gap-4">
@@ -84,13 +113,24 @@ const CreatePost = ({ onPostCreated }) => {
                     alt={`Preview ${index}`} 
                     className="w-full h-40 object-cover rounded-lg"
                   />
-                  <button 
-                    type="button" 
-                    onClick={() => removeImage(index)}
-                    className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-red-500 transition-colors"
-                  >
-                    <FaTimes size={12} />
-                  </button>
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    <button 
+                      type="button" 
+                      onClick={() => startEditing(index)}
+                      className="bg-black/50 text-white rounded-full p-1.5 hover:bg-blue-500 transition-colors"
+                      title="Edit Image"
+                    >
+                      <FaCrop size={12} />
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => removeImage(index)}
+                      className="bg-black/50 text-white rounded-full p-1.5 hover:bg-red-500 transition-colors"
+                      title="Remove Image"
+                    >
+                      <FaTimes size={12} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -117,6 +157,17 @@ const CreatePost = ({ onPostCreated }) => {
           </div>
         </form>
       </div>
+
+      {imageToCrop && (
+        <ImageCropper
+          image={imageToCrop}
+          onCropComplete={handleCropComplete}
+          onCancel={() => {
+            setImageToCrop(null);
+            setEditingImageIndex(null);
+          }}
+        />
+      )}
     </div>
   );
 };
