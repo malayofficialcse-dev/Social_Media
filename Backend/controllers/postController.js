@@ -75,7 +75,7 @@ export const updatePost = async (req, res) => {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    if (post.author_id.toString() !== req.user._id.toString()) {
+    if (post.author_id.toString() !== req.user._id.toString() && req.user.role !== "admin") {
       return res.status(403).json({ message: "Not authorized" });
     }
 

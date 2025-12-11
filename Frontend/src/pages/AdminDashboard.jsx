@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { toast } from 'react-toastify';
-import { FaTrash, FaUser, FaFileAlt, FaComment } from 'react-icons/fa';
+import { FaTrash, FaUser, FaFileAlt, FaComment, FaImage } from 'react-icons/fa';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({ totalUsers: 0, totalPosts: 0, totalComments: 0 });
   const [users, setUsers] = useState([]);
+  const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -14,12 +15,14 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [statsRes, usersRes] = await Promise.all([
+      const [statsRes, usersRes, postsRes] = await Promise.all([
         api.get('/admin/stats'),
-        api.get('/admin/users')
+        api.get('/admin/users'),
+        api.get('/admin/posts')
       ]);
       setStats(statsRes.data);
       setUsers(usersRes.data);
+      setPosts(postsRes.data);
     } catch (error) {
       console.error("Error fetching admin data", error);
       toast.error("Failed to load admin data");
@@ -35,8 +38,35 @@ const AdminDashboard = () => {
         setUsers(users.filter(u => u._id !== userId));
         setStats(prev => ({ ...prev, totalUsers: prev.totalUsers - 1 }));
         toast.success("User deleted successfully");
-      } catch (error) {
+      } catch (err) {
+        console.error(err);
         toast.error("Failed to delete user");
+      }
+    }
+  };
+
+  const handleDeletePost = async (postId) => {
+    if (window.confirm("Are you sure you want to delete this post?")) {
+      try {
+        await api.delete(`/posts/${postId}`);
+        setPosts(posts.filter(p => p._id !== postId));
+        setStats(prev => ({ ...prev, totalPosts: prev.totalPosts - 1 }));
+        toast.success("Post deleted successfully");
+      } catch (error) {
+        toast.error("Failed to delete post");
+      }
+    }
+  };
+
+  const handleEditPost = async (post) => {
+    const newContent = window.prompt("Edit Post Content:", post.content);
+    if (newContent !== null && newContent !== post.content) {
+      try {
+        const { data } = await api.put(`/posts/${post._id}`, { content: newContent });
+        setPosts(posts.map(p => p._id === post._id ? { ...p, content: data.content } : p));
+        toast.success("Post updated successfully");
+      } catch (error) {
+        toast.error("Failed to update post");
       }
     }
   };
@@ -79,7 +109,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Users Management */}
-      <div className="bg-slate-800 rounded-lg overflow-hidden">
+      <div className="bg-slate-800 rounded-lg overflow-hidden mb-10">
         <div className="p-6 border-b border-slate-700">
           <h2 className="text-xl font-bold text-white">Manage Users</h2>
         </div>
@@ -122,6 +152,84 @@ const AdminDashboard = () => {
                         <FaTrash />
                       </button>
                     )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Posts Management */}
+      <div className="bg-slate-800 rounded-lg overflow-hidden">
+        <div className="p-6 border-b border-slate-700">
+          <h2 className="text-xl font-bold text-white">Manage Posts</h2>
+          <p className="text-slate-400 text-sm mt-1">Admin can do everything with posts</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-slate-300">
+            <thead className="bg-slate-900/50 text-xs uppercase text-slate-400">
+              <tr>
+                <th className="px-6 py-3">Author</th>
+                <th className="px-6 py-3">Email</th>
+                <th className="px-6 py-3 w-1/3">Content</th>
+                <th className="px-6 py-3">Images</th>
+                <th className="px-6 py-3">Date</th>
+                <th className="px-6 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-700">
+              {posts.map((post) => (
+                <tr key={post._id} className="hover:bg-slate-700/50 transition-colors">
+                  <td className="px-6 py-4 flex items-center gap-3">
+                    <img 
+                      src={post.author_id?.profileImage || "https://via.placeholder.com/40"} 
+                      alt={post.author_id?.username} 
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                    <span className="font-medium text-white">{post.author_id?.username || "Unknown"}</span>
+                  </td>
+                  <td className="px-6 py-4 text-sm">{post.author_id?.email || "No Email"}</td>
+                  <td className="px-6 py-4">
+                    <div className="max-h-20 overflow-y-auto text-sm">
+                      {post.title && <p className="font-bold mb-1">{post.title}</p>}
+                      <p className="text-slate-400">{post.content}</p>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    {post.images && post.images.length > 0 ? (
+                      <div className="flex gap-1">
+                        {post.images.slice(0, 3).map((img, idx) => (
+                          <img key={idx} src={img} alt="Post" className="w-10 h-10 object-cover rounded" />
+                        ))}
+                        {post.images.length > 3 && (
+                          <div className="w-10 h-10 bg-slate-700 rounded flex items-center justify-center text-xs">
+                            +{post.images.length - 3}
+                          </div>
+                        )}
+                      </div>
+                    ) : post.image ? (
+                      <img src={post.image} alt="Post" className="w-10 h-10 object-cover rounded" />
+                    ) : (
+                      <span className="text-slate-600 text-xs">No images</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-sm">{new Date(post.createdAt).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 flex gap-2">
+                    <button 
+                      onClick={() => handleEditPost(post)}
+                      className="text-blue-400 hover:text-blue-300 transition-colors"
+                      title="Edit Post"
+                    >
+                      <FaFileAlt />
+                    </button>
+                    <button 
+                      onClick={() => handleDeletePost(post._id)}
+                      className="text-red-400 hover:text-red-300 transition-colors"
+                      title="Delete Post"
+                    >
+                      <FaTrash />
+                    </button>
                   </td>
                 </tr>
               ))}
