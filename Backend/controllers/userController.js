@@ -71,6 +71,7 @@ export const loginUser = async (req, res) => {
         backgroundImage: user.backgroundImage,
         followers: user.followers,
         following: user.following,
+        role: user.role,
       }
     });
   } catch (error) {

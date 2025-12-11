@@ -90,7 +90,7 @@ export const deleteComment = async (req, res) => {
       return res.status(404).json({ message: "Comment not found" });
     }
 
-    if (comment.author_id.toString() !== req.user._id.toString()) {
+    if (comment.author_id.toString() !== req.user._id.toString() && req.user.role !== "admin") {
       return res.status(403).json({ message: "Not authorized" });
     }
 

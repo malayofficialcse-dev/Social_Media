@@ -23,6 +23,7 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
   const [loadingComments, setLoadingComments] = useState(false);
 
   const isOwner = user?._id === post.author_id._id;
+  const isAdmin = user?.role === 'admin';
 
   const fetchComments = async () => {
     setLoadingComments(true);
@@ -48,10 +49,13 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
     if (!commentText.trim()) return;
 
     try {
-      await api.post(`/comments/${post._id}`, { content: commentText });
+      const { data } = await api.post(`/comments/${post._id}`, { content: commentText });
       setCommentText('');
       toast.success("Comment added!");
-      fetchComments(); // Refresh comments after adding
+      // Update local state immediately
+      setComments(prev => [data, ...prev]);
+      setCommentsCount(prev => prev + 1);
+      // Also update post.lastComments if needed (optional, but good for UI consistency)
     } catch (error) {
       toast.error(error.response?.data?.message || "Error adding comment");
     }
@@ -91,7 +95,21 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
         onDelete(post._id);
         toast.success("Post deleted");
       } catch (error) {
+        console.error(error);
         toast.error("Error deleting post");
+      }
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (window.confirm("Are you sure you want to delete this comment?")) {
+      try {
+        await api.delete(`/comments/${commentId}`);
+        setComments(comments.filter(c => c._id !== commentId));
+        setCommentsCount(prev => prev - 1);
+        toast.success("Comment deleted");
+      } catch (error) {
+        toast.error("Error deleting comment");
       }
     }
   };
@@ -110,6 +128,11 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
   const displayPost = post.isRepost ? post.originalPost : post;
   
   if (!displayPost) return null; // Handle case where original post is deleted
+
+  // Determine which comments to show
+  // If showComments is true, show 'comments' state (fetched from API)
+  // If showComments is false, show 'post.lastComments' (passed from parent/backend)
+  const visibleComments = showComments ? comments : (post.lastComments || []);
 
   return (
     <div className="card mb-4 hover:bg-slate-800/50 transition-colors">
@@ -140,11 +163,13 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
                 {formatDistanceToNow(new Date(displayPost.createdAt), { addSuffix: true })}
               </span>
             </div>
-            {isOwner && !post.isRepost && (
+            {(isOwner || isAdmin) && !post.isRepost && (
               <div className="flex gap-2">
-                <button onClick={() => setIsEditing(!isEditing)} className="text-slate-500 hover:text-accent">
-                  <FaEdit />
-                </button>
+                {isOwner && (
+                  <button onClick={() => setIsEditing(!isEditing)} className="text-slate-500 hover:text-accent">
+                    <FaEdit />
+                  </button>
+                )}
                 <button onClick={handleDelete} className="text-slate-500 hover:text-red-500">
                   <FaTrash />
                 </button>
@@ -228,8 +253,15 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
             </button>
           </div>
 
-          {showComments && (
-            <div className="mt-4 border-t border-slate-800 pt-4">
+          {/* Always show comments section if there are comments or if user wants to add one */}
+          <div className="mt-4 border-t border-slate-800 pt-4">
+            {/* Input always visible if showComments is true OR if we want to allow quick comment? 
+                User requirement: "always last 2 comment will be always visible at the the below of the image"
+                Let's keep the input hidden unless showComments is true, to save space? 
+                Or maybe just show the comments list.
+            */}
+            
+            {showComments && (
               <form onSubmit={handleComment} className="flex gap-2 mb-4">
                 <input
                   type="text"
@@ -246,14 +278,16 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
                   Post
                 </button>
               </form>
+            )}
 
-              {/* Comments List */}
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {loadingComments ? (
-                  <p className="text-center text-slate-500 text-sm">Loading comments...</p>
-                ) : comments.length > 0 ? (
-                  comments.map((comment) => (
-                    <div key={comment._id} className="flex gap-3 bg-slate-800/50 rounded-lg p-3">
+            {/* Comments List */}
+            <div className="space-y-3">
+              {loadingComments ? (
+                <p className="text-center text-slate-500 text-sm">Loading comments...</p>
+              ) : visibleComments.length > 0 ? (
+                <>
+                  {visibleComments.map((comment) => (
+                    <div key={comment._id} className="flex gap-3 bg-slate-800/50 rounded-lg p-3 group">
                       <Link to={`/profile/${comment.author_id._id}`}>
                         <img 
                           src={comment.author_id.profileImage || DEFAULT_AVATAR} 
@@ -262,27 +296,45 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
                         />
                       </Link>
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <Link 
-                            to={`/profile/${comment.author_id._id}`}
-                            className="font-medium text-white hover:underline text-sm"
-                          >
-                            {comment.author_id.username}
-                          </Link>
-                          <span className="text-xs text-slate-500">
-                            {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                          </span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Link 
+                              to={`/profile/${comment.author_id._id}`}
+                              className="font-medium text-white hover:underline text-sm"
+                            >
+                              {comment.author_id.username}
+                            </Link>
+                            <span className="text-xs text-slate-500">
+                              {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                            </span>
+                          </div>
+                          {(user?._id === comment.author_id._id || isAdmin) && (
+                            <button 
+                              onClick={() => handleDeleteComment(comment._id)}
+                              className="text-slate-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <FaTrash size={12} />
+                            </button>
+                          )}
                         </div>
                         <p className="text-slate-300 text-sm mt-1">{comment.content}</p>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-center text-slate-500 text-sm">No comments yet. Be the first to comment!</p>
-                )}
-              </div>
+                  ))}
+                  {!showComments && commentsCount > 2 && (
+                    <button 
+                      onClick={toggleComments}
+                      className="text-sm text-slate-500 hover:text-accent w-full text-left pl-2"
+                    >
+                      View all {commentsCount} comments
+                    </button>
+                  )}
+                </>
+              ) : showComments ? (
+                <p className="text-center text-slate-500 text-sm">No comments yet. Be the first to comment!</p>
+              ) : null}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

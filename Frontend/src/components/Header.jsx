@@ -121,6 +121,12 @@ const Header = () => {
             <FaEnvelope size={20} />
             <span className="text-xs">Contact</span>
           </Link>
+          {user?.role === 'admin' && (
+            <Link to="/admin" className="flex flex-col items-center gap-1 text-slate-400 hover:text-accent transition-colors">
+              <FaUser size={20} />
+              <span className="text-xs">Admin</span>
+            </Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-4">
@@ -219,6 +225,11 @@ const Header = () => {
               <Link to="/contact" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 text-slate-300" onClick={() => setIsMenuOpen(false)}>
                 <FaEnvelope /> Contact Us
               </Link>
+              {user?.role === 'admin' && (
+                <Link to="/admin" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 text-accent" onClick={() => setIsMenuOpen(false)}>
+                  <FaUser /> Admin Panel
+                </Link>
+              )}
             </nav>
           </div>
         </div>

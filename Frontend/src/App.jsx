@@ -14,6 +14,7 @@ import Notifications from './pages/Notifications';
 import Chat from './pages/Chat';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import AdminDashboard from './pages/AdminDashboard';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -58,6 +59,7 @@ function App() {
                 <Route path="profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                 <Route path="chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+                <Route path="admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
               </Route>
             </Routes>
             <ToastContainer theme="dark" position="bottom-right" />

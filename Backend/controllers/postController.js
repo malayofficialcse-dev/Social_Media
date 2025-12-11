@@ -40,7 +40,11 @@ export const getPosts = async (req, res) => {
 
     const postsWithCounts = await Promise.all(posts.map(async (post) => {
       const commentsCount = await Comment.countDocuments({ post_id: post._id });
-      return { ...post.toObject(), commentsCount };
+      const lastComments = await Comment.find({ post_id: post._id })
+        .sort({ createdAt: -1 })
+        .limit(2)
+        .populate("author_id", "username profileImage");
+      return { ...post.toObject(), commentsCount, lastComments };
     }));
 
     res.json(postsWithCounts);
@@ -92,7 +96,7 @@ export const deletePost = async (req, res) => {
       return res.status(404).json({ message: "Post not found" });
     }
 
-    if (post.author_id.toString() !== req.user._id.toString()) {
+    if (post.author_id.toString() !== req.user._id.toString() && req.user.role !== "admin") {
       return res.status(403).json({ message: "Not authorized" });
     }
 
