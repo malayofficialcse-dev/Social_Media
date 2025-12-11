@@ -63,3 +63,63 @@ export const getAllPosts = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Get Analytics
+export const getAnalytics = async (req, res) => {
+  try {
+    const getLast7Days = () => {
+      const dates = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        dates.push(d.toISOString().split('T')[0]);
+      }
+      return dates;
+    };
+
+    const dates = getLast7Days();
+
+    const getDailyCounts = async (Model) => {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const data = await Model.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: sevenDaysAgo }
+          }
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+      return data;
+    };
+
+    const [users, posts, comments] = await Promise.all([
+      getDailyCounts(User),
+      getDailyCounts(Post),
+      getDailyCounts(Comment)
+    ]);
+
+    const analytics = dates.map(date => {
+      const userCount = users.find(u => u._id === date)?.count || 0;
+      const postCount = posts.find(p => p._id === date)?.count || 0;
+      const commentCount = comments.find(c => c._id === date)?.count || 0;
+      return {
+        name: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }), // Mon, Tue
+        date,
+        users: userCount,
+        posts: postCount,
+        comments: commentCount
+      };
+    });
+
+    res.json(analytics);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
