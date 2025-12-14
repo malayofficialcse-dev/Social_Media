@@ -5,7 +5,7 @@ import { upload } from "../config/cloudinary.js";
 
 const router = express.Router();
 
-router.route("/").post(protect, upload.single('image'), sendMessage);
+router.route("/").post(protect, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'audio', maxCount: 1 }]), sendMessage);
 router.route("/chats").get(protect, getChatList);
 router.route("/:userId/mark-read").put(protect, markAsRead);
 router.route("/:userId/mark-delivered").put(protect, markAsDelivered);

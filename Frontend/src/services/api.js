@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-// Use environment variable for production, fallback to localhost for development
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+// Smart URL detection: If we are on localhost, use local backend. Otherwise use Prod.
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_URL = isLocal ? 'http://localhost:5001/api' : (import.meta.env.VITE_API_URL || 'https://social-media-vdsn.onrender.com/api');
 
 const api = axios.create({
   baseURL: API_URL,

@@ -8,9 +8,23 @@ import Notification from "../Models/Notification.js";
 // @access  Private
 export const sendMessage = asyncHandler(async (req, res) => {
   const { receiverId, content } = req.body;
-  const image = req.file ? req.file.path : null;
+  
+  let image = null;
+  let audio = null;
 
-  if (!receiverId || (!content && !image)) {
+  if (req.files) {
+    if (req.files.image) {
+      image = req.files.image[0].path;
+    }
+    if (req.files.audio) {
+      audio = req.files.audio[0].path;
+    }
+  } else if (req.file) {
+    // Fallback for single file upload (backwards compatibility)
+    image = req.file.path;
+  }
+
+  if (!receiverId || (!content && !image && !audio)) {
     res.status(400);
     throw new Error("Invalid data passed into request");
   }
@@ -20,6 +34,7 @@ export const sendMessage = asyncHandler(async (req, res) => {
     receiver: receiverId,
     content: content || "",
     image: image,
+    audio: audio,
     status: 'sent',
   };
 

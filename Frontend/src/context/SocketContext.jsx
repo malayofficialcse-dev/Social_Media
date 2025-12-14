@@ -2,8 +2,9 @@ import { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import io from 'socket.io-client';
 
-// Use environment variable for production, fallback to localhost for development
-const ENDPOINT = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5001';
+// Smart URL detection: If we are on localhost, use local backend. Otherwise use Prod.
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const ENDPOINT = isLocal ? 'http://localhost:5001' : (import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://social-media-vdsn.onrender.com');
 
 const SocketContext = createContext();
 

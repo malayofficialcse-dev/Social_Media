@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import api from '../services/api';
-import { FaPaperPlane, FaImage, FaTimes, FaArrowLeft, FaSmile, FaCheck, FaCheckDouble } from 'react-icons/fa';
+import { FaPaperPlane, FaImage, FaTimes, FaArrowLeft, FaSmile, FaCheck, FaCheckDouble, FaMicrophone, FaStop, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { formatDistanceToNow } from 'date-fns';
 import Cropper from 'react-easy-crop';
@@ -22,6 +22,14 @@ const Chat = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef(null);
   const userIdRef = useRef(user?._id);
+
+  // Voice Message State
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const timerRef = useRef(null);
 
   // Crop State
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -103,7 +111,7 @@ const Chat = () => {
           const CustomToast = () => (
             <div className="flex items-center gap-3">
               <img 
-                src={newMessageReceived.sender.profileImage || 'https://via.placeholder.com/40'} 
+                src={newMessageReceived.sender.profileImage || `https://ui-avatars.com/api/?name=${newMessageReceived.sender.username}&background=random`} 
                 alt={newMessageReceived.sender.username}
                 className="w-10 h-10 rounded-full object-cover"
               />
@@ -161,6 +169,76 @@ const Chat = () => {
     };
   }, [socket, selectedChat, fetchChatList, markMessagesAsRead]);
 
+
+  // Voice Recording Functions
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(audioBlob);
+        stream.getTracks().forEach(track => track.stop()); // Stop mic access
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      
+      // Start timer
+      setRecordingDuration(0);
+      timerRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+      if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        toast.error("No microphone found. Please connect a microphone.");
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        toast.error("Microphone is busy or blocked. Close other apps using it.");
+      } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        toast.error("Microphone permission denied. Allow access in browser settings.");
+      } else {
+        toast.error("Could not access microphone.");
+      }
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      clearInterval(timerRef.current);
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      clearInterval(timerRef.current);
+      setAudioBlob(null);
+      audioChunksRef.current = [];
+    } else {
+      setAudioBlob(null);
+    }
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
   // Auto scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -174,6 +252,11 @@ const Chat = () => {
     formData.append('receiverId', selectedChat._id);
     formData.append('content', newMessage);
     if (image) formData.append('image', image);
+    if (audioBlob) {
+      // Create a file from blob
+      const audioFile = new File([audioBlob], "voice_message.webm", { type: "audio/webm" });
+      formData.append('audio', audioFile);
+    }
 
     try {
       const { data } = await api.post('/messages', formData, {
@@ -183,6 +266,7 @@ const Chat = () => {
       setMessages([data, ...messages]);
       setNewMessage('');
       setImage(null);
+      setAudioBlob(null);
 
       // Emit socket event
       socket.emit('new message', {
@@ -338,7 +422,7 @@ const Chat = () => {
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <img
-                    src={chatUser.profileImage || 'https://via.placeholder.com/40'}
+                    src={chatUser.profileImage || `https://ui-avatars.com/api/?name=${chatUser.username}&background=random`}
                     alt={chatUser.username}
                     className="w-12 h-12 rounded-full object-cover"
                   />
@@ -387,7 +471,7 @@ const Chat = () => {
               </button>
               <div className="relative">
                 <img
-                  src={selectedChat.profileImage || 'https://via.placeholder.com/40'}
+                  src={selectedChat.profileImage || `https://ui-avatars.com/api/?name=${selectedChat.username}&background=random`}
                   alt={selectedChat.username}
                   className="w-10 h-10 rounded-full object-cover"
                 />
@@ -422,6 +506,13 @@ const Chat = () => {
                       {message.image && (
                         <img src={message.image} alt="Message" className="rounded mb-2 max-h-60 w-full object-cover" />
                       )}
+                      
+                      {message.audio && (
+                        <div className="mb-2 min-w-[200px]">
+                           <audio controls src={message.audio} className="w-full h-8" />
+                        </div>
+                      )}
+
                       {message.content && <p className="text-sm">{message.content}</p>}
                       <p className="text-xs opacity-70 mt-1">
                         {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
@@ -488,20 +579,65 @@ const Chat = () => {
                   )}
                 </div>
 
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={handleTyping}
-                  placeholder="Type a message..."
-                  className="flex-1 bg-slate-800 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-                />
-                <button
-                  type="submit"
-                  disabled={!newMessage.trim() && !image}
-                  className="bg-accent text-white rounded-full p-2 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <FaPaperPlane size={20} />
-                </button>
+                {isRecording ? (
+                   <div className="flex-1 flex items-center gap-4 bg-slate-800 rounded-full px-4 py-2">
+                     <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                     <span className="text-white font-mono flex-1">{formatTime(recordingDuration)}</span>
+                     <button 
+                       type="button" 
+                       onClick={cancelRecording}
+                       className="text-slate-400 hover:text-red-500"
+                     >
+                       <FaTrash size={18} />
+                     </button>
+                     <button 
+                       type="button" 
+                       onClick={stopRecording}
+                       className="text-red-500 hover:text-red-400"
+                     >
+                       <FaStop size={20} />
+                     </button>
+                   </div>
+                ) : audioBlob ? (
+                  <div className="flex-1 flex items-center gap-3 bg-slate-800 rounded-full px-4 py-2">
+                    <audio src={URL.createObjectURL(audioBlob)} controls className="h-6 w-full max-w-[200px]" />
+                    <button 
+                       type="button" 
+                       onClick={cancelRecording}
+                       className="text-red-500 hover:text-red-400 ml-2"
+                    >
+                      <FaTrash size={18} />
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={handleTyping}
+                    placeholder="Type a message..."
+                    className="flex-1 bg-slate-800 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+                  />
+                )}
+                
+                <div className="flex gap-2">
+                  {!isRecording && !audioBlob && !newMessage.trim() && !image ? (
+                     <button
+                       type="button"
+                       onClick={startRecording}
+                       className="bg-slate-700 text-white rounded-full p-2 hover:bg-slate-600"
+                     >
+                       <FaMicrophone size={20} />
+                     </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={!newMessage.trim() && !image && !audioBlob}
+                      className="bg-accent text-white rounded-full p-2 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <FaPaperPlane size={20} />
+                    </button>
+                  )}
+                </div>
               </div>
             </form>
           </>
