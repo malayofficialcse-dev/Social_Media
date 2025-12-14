@@ -18,11 +18,14 @@ export const sendMessage = asyncHandler(async (req, res) => {
     }
     if (req.files.audio) {
       audio = req.files.audio[0].path;
+      console.log("Audio uploaded:", audio);
     }
   } else if (req.file) {
     // Fallback for single file upload (backwards compatibility)
     image = req.file.path;
   }
+
+  console.log("Send Message Request:", { content, image: !!image, audio: !!audio, receiverId });
 
   if (!receiverId || (!content && !image && !audio)) {
     res.status(400);

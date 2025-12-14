@@ -8,6 +8,7 @@ import { formatDistanceToNow } from 'date-fns';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropImage';
 import EmojiPicker from 'emoji-picker-react';
+import AudioPlayer from '../components/AudioPlayer';
 
 const Chat = () => {
   const { user } = useAuth();
@@ -18,6 +19,7 @@ const Chat = () => {
   const [newMessage, setNewMessage] = useState('');
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [typing, setTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef(null);
@@ -253,15 +255,19 @@ const Chat = () => {
     formData.append('content', newMessage);
     if (image) formData.append('image', image);
     if (audioBlob) {
+      console.log('Sending audio blob:', audioBlob);
       // Create a file from blob
       const audioFile = new File([audioBlob], "voice_message.webm", { type: "audio/webm" });
       formData.append('audio', audioFile);
     }
 
+    setIsSending(true);
     try {
       const { data } = await api.post('/messages', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+
+      console.log('Message sent successfully:', data);
 
       setMessages([data, ...messages]);
       setNewMessage('');
@@ -274,7 +280,10 @@ const Chat = () => {
         receiver: selectedChat._id,
       });
     } catch (error) {
+      console.error('Send message error:', error);
       toast.error('Error sending message');
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -508,8 +517,8 @@ const Chat = () => {
                       )}
                       
                       {message.audio && (
-                        <div className="mb-2 min-w-[200px]">
-                           <audio controls src={message.audio} className="w-full h-8" />
+                        <div className="mb-2">
+                           <AudioPlayer src={message.audio} />
                         </div>
                       )}
 
@@ -631,10 +640,10 @@ const Chat = () => {
                   ) : (
                     <button
                       type="submit"
-                      disabled={!newMessage.trim() && !image && !audioBlob}
+                      disabled={(!newMessage.trim() && !image && !audioBlob) || isSending}
                       className="bg-accent text-white rounded-full p-2 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <FaPaperPlane size={20} />
+                      {isSending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <FaPaperPlane size={20} />}
                     </button>
                   )}
                 </div>
