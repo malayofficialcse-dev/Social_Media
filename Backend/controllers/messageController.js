@@ -187,3 +187,58 @@ export const markAsDelivered = asyncHandler(async (req, res) => {
     throw new Error(error.message);
   }
 });
+
+// @desc    React to a message
+// @route   PUT /api/messages/:messageId/react
+// @access  Private
+export const reactToMessage = asyncHandler(async (req, res) => {
+  const { emoji } = req.body;
+  const { messageId } = req.params;
+
+  try {
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      res.status(404);
+      throw new Error("Message not found");
+    }
+
+    // Check if user already reacted
+    const existingReactionIndex = message.reactions.findIndex(
+      (r) => r.user.toString() === req.user._id.toString()
+    );
+
+    if (existingReactionIndex > -1) {
+      // If same emoji, remove reaction (toggle)
+      if (message.reactions[existingReactionIndex].emoji === emoji) {
+        message.reactions.splice(existingReactionIndex, 1);
+      } else {
+        // Update emoji
+        message.reactions[existingReactionIndex].emoji = emoji;
+      }
+    } else {
+      // Add new reaction
+      message.reactions.push({
+        user: req.user._id,
+        emoji: emoji
+      });
+    }
+
+    await message.save();
+
+    // Populate user info for socket event
+    const fullMessage = await Message.findById(messageId)
+      .populate("sender", "username profileImage")
+      .populate("receiver", "username profileImage")
+      .populate("reactions.user", "username profileImage");
+
+    // Emit reaction update to both users in the chat
+    req.io.to(fullMessage.sender._id.toString()).emit('message reaction', fullMessage);
+    req.io.to(fullMessage.receiver._id.toString()).emit('message reaction', fullMessage);
+
+    res.json(fullMessage);
+  } catch (error) {
+    res.status(400);
+    throw new Error(error.message);
+  }
+});

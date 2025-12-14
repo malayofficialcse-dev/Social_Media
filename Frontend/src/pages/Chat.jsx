@@ -33,6 +33,10 @@ const Chat = () => {
   const audioChunksRef = useRef([]);
   const timerRef = useRef(null);
 
+  // Reaction State
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, messageId: null });
+  const longPressTimerRef = useRef(null);
+
   // Crop State
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -158,6 +162,12 @@ const Chat = () => {
 
       socket.on('typing', () => setTyping(true));
       socket.on('stop typing', () => setTyping(false));
+
+      socket.on('message reaction', (updatedMessage) => {
+        setMessages(prev => prev.map(msg => 
+          msg._id === updatedMessage._id ? { ...msg, reactions: updatedMessage.reactions } : msg
+        ));
+      });
     }
 
     return () => {
@@ -167,6 +177,7 @@ const Chat = () => {
         socket.off('message delivered');
         socket.off('typing');
         socket.off('stop typing');
+        socket.off('message reaction');
       }
     };
   }, [socket, selectedChat, fetchChatList, markMessagesAsRead]);
@@ -240,6 +251,52 @@ const Chat = () => {
     const secs = seconds % 60;
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
+
+  // Reaction Handlers
+  const handleReaction = async (emoji, messageId) => {
+    try {
+      const { data } = await api.put(`/messages/${messageId}/react`, { emoji });
+      setMessages(prev => prev.map(msg => msg._id === messageId ? data : msg));
+      setContextMenu({ visible: false, x: 0, y: 0, messageId: null });
+    } catch (error) {
+      console.error('Error reacting to message', error);
+      toast.error('Failed to react');
+    }
+  };
+
+  const handleContextMenu = (e, messageId) => {
+    e.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: e.pageX,
+      y: e.pageY,
+      messageId
+    });
+  };
+
+  const handleTouchStart = (messageId, e) => {
+    longPressTimerRef.current = setTimeout(() => {
+      setContextMenu({
+        visible: true,
+        x: e.touches[0].pageX,
+        y: e.touches[0].pageY,
+        messageId
+      });
+    }, 500); // 500ms long press
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
+  };
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClick = () => setContextMenu({ visible: false, x: 0, y: 0, messageId: null });
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, []);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -506,11 +563,14 @@ const Chat = () => {
                     className={`mb-4 flex ${message.sender._id === user._id ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
+                      onContextMenu={(e) => handleContextMenu(e, message._id)}
+                      onTouchStart={(e) => handleTouchStart(message._id, e)}
+                      onTouchEnd={handleTouchEnd}
                       className={`max-w-xs md:max-w-md lg:max-w-lg ${
                         message.sender._id === user._id
                           ? 'bg-accent text-white'
                           : 'bg-slate-800 text-slate-200'
-                      } rounded-lg p-3`}
+                      } rounded-lg p-3 relative select-none`}
                     >
                       {message.image && (
                         <img src={message.image} alt="Message" className="rounded mb-2 max-h-60 w-full object-cover" />
@@ -523,6 +583,18 @@ const Chat = () => {
                       )}
 
                       {message.content && <p className="text-sm">{message.content}</p>}
+                      
+                      {/* Reactions Display */}
+                      {message.reactions && message.reactions.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1 justify-end">
+                          {message.reactions.map((reaction, idx) => (
+                            <span key={idx} className="bg-slate-700/50 text-xs rounded-full px-1.5 py-0.5" title={reaction.user.username}>
+                              {reaction.emoji}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
                       <p className="text-xs opacity-70 mt-1">
                         {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
                       </p>
@@ -656,6 +728,28 @@ const Chat = () => {
           </div>
         )}
       </div>
+      {/* Context Menu for Reactions */}
+      {contextMenu.visible && (
+        <div 
+          className="fixed z-50 bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-2 flex gap-2 animate-in fade-in zoom-in duration-200"
+          style={{ top: contextMenu.y - 50, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {['❤️', '😂', '😮', '😢', '😡', '👍'].map(emoji => (
+            <button
+              key={emoji}
+              onClick={() => handleReaction(emoji, contextMenu.messageId)}
+              className="hover:scale-125 transition-transform text-xl"
+            >
+              {emoji}
+            </button>
+          ))}
+          <div className="border-l border-slate-600 pl-2 ml-1 relative group">
+             <button className="text-slate-400 hover:text-white">+</button>
+             {/* Full Emoji Picker could go here if requested, simpler for now */}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

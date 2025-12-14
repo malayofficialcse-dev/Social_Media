@@ -21,6 +21,16 @@ const messageSchema = new mongoose.Schema({
   audio: {
     type: String,
   },
+  reactions: [{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    emoji: {
+      type: String,
+      required: true,
+    }
+  }],
   status: {
     type: String,
     enum: ["sent", "delivered", "read"],
