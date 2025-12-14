@@ -10,6 +10,7 @@ import postRoutes from "./routes/postRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
+import storyRoutes from "./routes/storyRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
@@ -98,6 +99,23 @@ app.use("/api/posts", postRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/stories", storyRoutes);
+
+// Story Cleanup Cron Job (Runs every hour)
+import Story from "./Models/Story.js";
+setInterval(async () => {
+  try {
+    const result = await Story.deleteMany({
+      expiresAt: { $lt: new Date() },
+      isHighlight: false
+    });
+    if (result.deletedCount > 0) {
+      console.log(`Cron: Deleted ${result.deletedCount} expired stories`);
+    }
+  } catch (error) {
+    console.error("Cron Error:", error);
+  }
+}, 60 * 60 * 1000); // 1 Hour
 app.use("/api/admin", adminRoutes);
 
 // Global Error Handler

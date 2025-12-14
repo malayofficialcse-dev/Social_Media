@@ -2,11 +2,14 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import CreatePost from '../components/CreatePost';
 import PostCard from '../components/PostCard';
+import StoryBar from '../components/StoryBar';
 
 const Home = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // ... (rest is same, skipping to render)
+  
   useEffect(() => {
     const fetchPosts = async () => {
       try {
@@ -39,7 +42,7 @@ const Home = () => {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Home</h1>
+      <StoryBar />
       <CreatePost onPostCreated={handlePostCreated} />
       <div className="space-y-4">
         {posts.map(post => (
