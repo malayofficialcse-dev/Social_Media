@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import api from '../services/api';
-import { FaPaperPlane, FaImage, FaTimes, FaArrowLeft, FaSmile } from 'react-icons/fa';
+import { FaPaperPlane, FaImage, FaTimes, FaArrowLeft, FaSmile, FaCheck, FaCheckDouble } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { formatDistanceToNow } from 'date-fns';
 import Cropper from 'react-easy-crop';
@@ -21,6 +21,7 @@ const Chat = () => {
   const [typing, setTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef(null);
+  const userIdRef = useRef(user?._id);
 
   // Crop State
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -34,10 +35,22 @@ const Chat = () => {
     try {
       const { data } = await api.get('/messages/chats');
       setChatList(data);
+      
+      // Mark messages as delivered for all chats with unread messages
+      // This handles messages sent while user was offline
+      data.forEach(chat => {
+        if (chat.unreadCount > 0) {
+          api.put(`/messages/${chat._id}/mark-delivered`).catch(console.error);
+        }
+      });
     } catch (error) {
       console.error('Error fetching chat list', error);
     }
   }, []);
+
+  useEffect(() => {
+    userIdRef.current = user?._id;
+  }, [user]);
 
   useEffect(() => {
     fetchChatList();
@@ -83,6 +96,9 @@ const Chat = () => {
           // Mark as read since user is viewing the chat
           markMessagesAsRead();
         } else {
+          // Mark as delivered since we received it but haven't read it
+          api.put(`/messages/${newMessageReceived.sender._id}/mark-delivered`).catch(console.error);
+
           // Show toast notification with sender image
           const CustomToast = () => (
             <div className="flex items-center gap-3">
@@ -111,6 +127,25 @@ const Chat = () => {
         fetchChatList();
       });
 
+      // Status updates for SENT messages
+      socket.on('message read', ({ readerId }) => {
+        // Update messages if we're viewing the chat with the person who read our messages
+        if (selectedChat && selectedChat._id === readerId) {
+          setMessages(prev => prev.map(msg => 
+            msg.sender._id === userIdRef.current ? { ...msg, status: 'read' } : msg
+          ));
+        }
+      });
+
+      socket.on('message delivered', ({ receiverId }) => {
+        // Update messages if we're viewing the chat with the person who received our messages
+        if (selectedChat && selectedChat._id === receiverId) {
+           setMessages(prev => prev.map(msg => 
+            msg.sender._id === userIdRef.current && msg.status === 'sent' ? { ...msg, status: 'delivered' } : msg
+          ));
+        }
+      });
+
       socket.on('typing', () => setTyping(true));
       socket.on('stop typing', () => setTyping(false));
     }
@@ -118,6 +153,8 @@ const Chat = () => {
     return () => {
       if (socket) {
         socket.off('message received');
+        socket.off('message read');
+        socket.off('message delivered');
         socket.off('typing');
         socket.off('stop typing');
       }
@@ -389,6 +426,13 @@ const Chat = () => {
                       <p className="text-xs opacity-70 mt-1">
                         {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
                       </p>
+                      {message.sender._id === user._id && (
+                        <div className="flex justify-end mt-1 items-center gap-1">
+                          {(!message.status || message.status === 'sent') && <FaCheck className="text-white text-sm" />}
+                          {message.status === 'delivered' && <FaCheckDouble className="text-white text-sm" />}
+                          {message.status === 'read' && <FaCheckDouble className="text-green-400 text-sm" />}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))

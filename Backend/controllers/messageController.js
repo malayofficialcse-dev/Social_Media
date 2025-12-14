@@ -20,6 +20,7 @@ export const sendMessage = asyncHandler(async (req, res) => {
     receiver: receiverId,
     content: content || "",
     image: image,
+    status: 'sent',
   };
 
   try {
@@ -81,7 +82,7 @@ export const getChatList = asyncHandler(async (req, res) => {
       const unreadCount = await Message.countDocuments({
         sender: chatUser._id,
         receiver: req.user._id,
-        isRead: false
+        status: { $ne: 'read' }
       });
 
       // Get last message between these users
@@ -123,10 +124,45 @@ export const markAsRead = asyncHandler(async (req, res) => {
       {
         sender: req.params.userId,
         receiver: req.user._id,
-        isRead: false
+        status: { $ne: 'read' }
       },
-      { isRead: true }
+      { status: 'read' }
     );
+
+    // Emit socket event to the sender that their messages were read
+    // req.params.userId is the sender of the messages
+    req.io.to(req.params.userId).emit('message read', {
+      readerId: req.user._id,
+      senderId: req.params.userId
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(400);
+    throw new Error(error.message);
+  }
+});
+
+// @desc    Mark messages as delivered
+// @route   PUT /api/messages/:userId/mark-delivered
+// @access  Private
+export const markAsDelivered = asyncHandler(async (req, res) => {
+  try {
+    await Message.updateMany(
+      {
+        sender: req.params.userId,
+        receiver: req.user._id,
+        status: 'sent'
+      },
+      { status: 'delivered' }
+    );
+
+    // Emit socket event to the sender that their messages were delivered
+    req.io.to(req.params.userId).emit('message delivered', {
+      receiverId: req.user._id,
+      senderId: req.params.userId
+    });
+
     res.json({ success: true });
   } catch (error) {
     res.status(400);

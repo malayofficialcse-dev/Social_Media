@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-// Forcing local development URL as per user request to fix 404s
-// const API_URL = 'http://localhost:5001/api';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+// TEMPORARY: Hardcoded for local testing - CHANGE BACK BEFORE DEPLOYING!
+const API_URL = 'http://localhost:5001/api';
 
 const api = axios.create({
   baseURL: API_URL,
