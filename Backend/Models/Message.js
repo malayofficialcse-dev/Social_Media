@@ -31,6 +31,18 @@ const messageSchema = new mongoose.Schema({
       required: true,
     }
   }],
+  deletedForEveryone: {
+    type: Boolean,
+    default: false,
+  },
+  deletedBy: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  }],
+  isForwarded: {
+    type: Boolean,
+    default: false,
+  },
   status: {
     type: String,
     enum: ["sent", "delivered", "read"],

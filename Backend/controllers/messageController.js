@@ -7,7 +7,7 @@ import Notification from "../Models/Notification.js";
 // @route   POST /api/messages
 // @access  Private
 export const sendMessage = asyncHandler(async (req, res) => {
-  const { receiverId, content } = req.body;
+  const { receiverId, content, isForwarded } = req.body;
   
   let image = null;
   let audio = null;
@@ -38,6 +38,7 @@ export const sendMessage = asyncHandler(async (req, res) => {
     content: content || "",
     image: image,
     audio: audio,
+    isForwarded: isForwarded === 'true' || isForwarded === true, // handle string/bool
     status: 'sent',
   };
 
@@ -237,6 +238,64 @@ export const reactToMessage = asyncHandler(async (req, res) => {
     req.io.to(fullMessage.receiver._id.toString()).emit('message reaction', fullMessage);
 
     res.json(fullMessage);
+  } catch (error) {
+    res.status(400);
+    throw new Error(error.message);
+  }
+});
+
+// @desc    Delete message (for me or everyone)
+// @route   PUT /api/messages/:messageId/delete
+// @access  Private
+export const deleteMessage = asyncHandler(async (req, res) => {
+  const { type } = req.body; // 'me' or 'everyone'
+  const { messageId } = req.params;
+
+  try {
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      res.status(404);
+      throw new Error("Message not found");
+    }
+
+    if (type === 'everyone') {
+      // Only sender can delete for everyone
+      if (message.sender.toString() !== req.user._id.toString()) {
+        res.status(401);
+        throw new Error("You can only delete your own messages for everyone");
+      }
+      
+      message.deletedForEveryone = true;
+      message.content = "This message was deleted";
+      message.image = "";
+      message.audio = "";
+      
+      await message.save();
+      
+      // Notify via socket
+      // Emit to sender and receiver
+      const updateData = {
+        messageId: message._id,
+        deletedForEveryone: true,
+        content: message.content
+      };
+      
+      req.io.to(message.sender.toString()).emit('message deleted', updateData);
+      req.io.to(message.receiver.toString()).emit('message deleted', updateData);
+
+    } else if (type === 'me') {
+      // Add user to deletedBy array if not already there
+      if (!message.deletedBy.includes(req.user._id)) {
+        message.deletedBy.push(req.user._id);
+        await message.save();
+      }
+    } else {
+      res.status(400);
+      throw new Error("Invalid delete type");
+    }
+
+    res.json(message);
   } catch (error) {
     res.status(400);
     throw new Error(error.message);
