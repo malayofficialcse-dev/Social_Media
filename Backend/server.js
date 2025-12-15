@@ -11,6 +11,7 @@ import commentRoutes from "./routes/commentRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import storyRoutes from "./routes/storyRoutes.js";
+import groupRoutes from "./routes/groupRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
@@ -65,25 +66,27 @@ io.on("connection", (socket) => {
   socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
   socket.on("new message", (newMessageRecieved) => {
-    var chat = newMessageRecieved.chat; // Assuming chat structure, or just receiver
-    // If we use direct messaging, we can emit to receiver's ID
-    
-    // For simple 1-on-1:
-    const receiverId = newMessageRecieved.receiver;
-    const senderId = newMessageRecieved.sender._id;
+    // Check if it's a group message
+    if (newMessageRecieved.group) {
+        // Emit to the group room (roomId = groupId)
+        socket.in(newMessageRecieved.group._id || newMessageRecieved.group).emit("message received", newMessageRecieved);
+    } else {
+        // For simple 1-on-1:
+        const receiverId = newMessageRecieved.receiver ? (newMessageRecieved.receiver._id || newMessageRecieved.receiver) : null;
 
-    if (!receiverId) return console.log("Receiver not defined");
+        if (!receiverId) return console.log("Receiver not defined");
 
-    // Emit to receiver
-    socket.in(receiverId).emit("message received", newMessageRecieved);
-    
-    // Also emit notification if receiver is not in the chat (handled by frontend logic mostly, but we can emit a specific notification event)
-    socket.in(receiverId).emit("notification received", {
-      type: 'message',
-      sender: newMessageRecieved.sender,
-      content: newMessageRecieved.content,
-      chatId: senderId // Navigate to this chat
-    });
+        // Emit to receiver
+        socket.in(receiverId).emit("message received", newMessageRecieved);
+        
+        // Also emit notification
+        socket.in(receiverId).emit("notification received", {
+          type: 'message',
+          sender: newMessageRecieved.sender,
+          content: newMessageRecieved.content,
+          chatId: newMessageRecieved.sender._id // Navigate to this chat
+        });
+    }
   });
 
   socket.on("disconnect", () => {
@@ -99,6 +102,7 @@ app.use("/api/posts", postRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/groups", groupRoutes);
 app.use("/api/stories", storyRoutes);
 
 // Story Cleanup Cron Job (Runs every hour)

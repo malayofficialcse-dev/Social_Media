@@ -3,11 +3,12 @@ import Message from "../Models/Message.js";
 import User from "../Models/User.js";
 import Notification from "../Models/Notification.js";
 
+import Group from "../Models/Group.js";
 // @desc    Send a message
 // @route   POST /api/messages
 // @access  Private
 export const sendMessage = asyncHandler(async (req, res) => {
-  const { receiverId, content, isForwarded } = req.body;
+  const { receiverId, groupId, content, isForwarded } = req.body;
   
   let image = null;
   let audio = null;
@@ -25,16 +26,15 @@ export const sendMessage = asyncHandler(async (req, res) => {
     image = req.file.path;
   }
 
-  console.log("Send Message Request:", { content, image: !!image, audio: !!audio, receiverId });
+  console.log("Send Message Request:", { content, image: !!image, audio: !!audio, receiverId, groupId });
 
-  if (!receiverId || (!content && !image && !audio)) {
+  if ((!receiverId && !groupId) || (!content && !image && !audio)) {
     res.status(400);
     throw new Error("Invalid data passed into request");
   }
 
   var newMessage = {
     sender: req.user._id,
-    receiver: receiverId,
     content: content || "",
     image: image,
     audio: audio,
@@ -42,11 +42,19 @@ export const sendMessage = asyncHandler(async (req, res) => {
     status: 'sent',
   };
 
+  if (receiverId) {
+    newMessage.receiver = receiverId;
+  }
+  if (groupId) {
+    newMessage.group = groupId;
+  }
+
   try {
     var message = await Message.create(newMessage);
 
     message = await message.populate("sender", "username profileImage");
-    message = await message.populate("receiver", "username profileImage");
+    if (receiverId) message = await message.populate("receiver", "username profileImage");
+    if (groupId) message = await message.populate("group");
 
     // Don't create notification here - let Socket.io handle it based on user's active chat status
 
@@ -57,20 +65,39 @@ export const sendMessage = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Fetch all messages between two users
-// @route   GET /api/messages/:userId
+// @desc    Fetch all messages between two users OR in a group
+// @route   GET /api/messages/:id (id can be userId or groupId)
 // @access  Private
 export const allMessages = asyncHandler(async (req, res) => {
   try {
-    const messages = await Message.find({
-      $or: [
-        { sender: req.user._id, receiver: req.params.userId },
-        { sender: req.params.userId, receiver: req.user._id },
-      ],
-    })
-      .populate("sender", "username profileImage")
-      .populate("receiver", "username profileImage")
-      .sort({ createdAt: -1 }); // Reverse order as requested
+    const id = req.params.userId;
+    
+    // Check if it's a group
+    // Optimization: Check formatting or try finding group first
+    // Since IDs look same, we try to find group first if logic permits, or we check if user exists.
+    // Let's try finding group first as it's a specific feature addition
+    const group = await Group.findById(id);
+
+    let messages;
+    if (group) {
+         // It is a group
+         messages = await Message.find({ group: id })
+            .populate("sender", "username profileImage")
+            .populate("group")
+            .sort({ createdAt: -1 });
+    } else {
+        // Assume it is a user
+        messages = await Message.find({
+            $or: [
+                { sender: req.user._id, receiver: id },
+                { sender: id, receiver: req.user._id },
+            ],
+            group: { $exists: false } // ensure we don't fetch group messages if by chance IDs conflict/mix (unlikely but safe) or if logic overlaps
+        })
+        .populate("sender", "username profileImage")
+        .populate("receiver", "username profileImage")
+        .sort({ createdAt: -1 });
+    }
 
     res.json(messages);
   } catch (error) {
@@ -79,7 +106,7 @@ export const allMessages = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Get chat list (users who have chatted with current user or are followed/following)
+// @desc    Get chat list (users + groups)
 // @route   GET /api/messages/chats
 // @access  Private
 export const getChatList = asyncHandler(async (req, res) => {
@@ -94,7 +121,7 @@ export const getChatList = asyncHandler(async (req, res) => {
 
   const chatUsers = Array.from(chatUsersMap.values());
 
-  // Get messages to calculate unread count and last message
+  // Get User Chats with last message
   const enrichedChats = await Promise.all(
     chatUsers.map(async (chatUser) => {
       // Get unread messages count from this user
@@ -109,12 +136,14 @@ export const getChatList = asyncHandler(async (req, res) => {
         $or: [
           { sender: req.user._id, receiver: chatUser._id },
           { sender: chatUser._id, receiver: req.user._id }
-        ]
+        ],
+        group: { $exists: false }
       }).sort({ createdAt: -1 });
 
       return {
         ...chatUser.toObject(),
         unreadCount,
+        isGroup: false,
         lastMessage: lastMessage ? {
           content: lastMessage.content,
           createdAt: lastMessage.createdAt,
@@ -124,14 +153,45 @@ export const getChatList = asyncHandler(async (req, res) => {
     })
   );
 
-  // Sort by most recent message
-  enrichedChats.sort((a, b) => {
+  // Get Groups
+  const groups = await Group.find({ members: req.user._id });
+  
+  const enrichedGroups = await Promise.all(
+      groups.map(async (group) => {
+          // Unread count for group (simpler version: count all messages since user's last read? Too complex for now, assume 0 or implement 'readBy' in group msgs)
+          // For now, let's just get last message
+          const lastMessage = await Message.findOne({ group: group._id })
+            .sort({ createdAt: -1 })
+            .populate('sender', 'username');
+
+          return {
+              _id: group._id,
+              username: group.name, // Map name to username for frontend compatibility
+              profileImage: group.profileImage,
+              isGroup: true,
+              members: group.members,
+              admins: group.admins,
+              unreadCount: 0, // Pending implementation
+              lastMessage: lastMessage ? {
+                  content: lastMessage.content,
+                  createdAt: lastMessage.createdAt,
+                  senderId: lastMessage.sender._id.toString(),
+                  senderName: lastMessage.sender.username
+              } : null
+          };
+      })
+  );
+
+  // Combine and Sort
+  const allChats = [...enrichedGroups, ...enrichedChats];
+
+  allChats.sort((a, b) => {
     const aTime = a.lastMessage ? new Date(a.lastMessage.createdAt) : new Date(0);
     const bTime = b.lastMessage ? new Date(b.lastMessage.createdAt) : new Date(0);
     return bTime - aTime;
   });
 
-  res.json(enrichedChats);
+  res.json(allChats);
 });
 
 // @desc    Mark messages as read
@@ -228,17 +288,30 @@ export const reactToMessage = asyncHandler(async (req, res) => {
     await message.save();
 
     // Populate user info for socket event
-    const fullMessage = await Message.findById(messageId)
+    let fullMessage = await Message.findById(messageId)
       .populate("sender", "username profileImage")
-      .populate("receiver", "username profileImage")
       .populate("reactions.user", "username profileImage");
+      
+    if (fullMessage.receiver) {
+        fullMessage = await fullMessage.populate("receiver", "username profileImage");
+    }
+    if (fullMessage.group) {
+        fullMessage = await fullMessage.populate("group");
+    }
 
-    // Emit reaction update to both users in the chat
-    req.io.to(fullMessage.sender._id.toString()).emit('message reaction', fullMessage);
-    req.io.to(fullMessage.receiver._id.toString()).emit('message reaction', fullMessage);
+    // Emit reaction update to chat participants
+    if (fullMessage.group) {
+        // Broadcast to group room
+        req.io.to(fullMessage.group._id.toString()).emit('message reaction', fullMessage);
+    } else if (fullMessage.receiver) {
+        // Direct message
+        req.io.to(fullMessage.sender._id.toString()).emit('message reaction', fullMessage);
+        req.io.to(fullMessage.receiver._id.toString()).emit('message reaction', fullMessage);
+    }
 
     res.json(fullMessage);
   } catch (error) {
+    console.error("Reaction Error:", error);
     res.status(400);
     throw new Error(error.message);
   }
@@ -282,7 +355,13 @@ export const deleteMessage = asyncHandler(async (req, res) => {
       };
       
       req.io.to(message.sender.toString()).emit('message deleted', updateData);
-      req.io.to(message.receiver.toString()).emit('message deleted', updateData);
+      
+      // Emit to receiver or group
+      if (message.group) {
+          req.io.to(message.group.toString()).emit('message deleted', updateData);
+      } else if (message.receiver) {
+          req.io.to(message.receiver.toString()).emit('message deleted', updateData);
+      }
 
     } else if (type === 'me') {
       // Add user to deletedBy array if not already there

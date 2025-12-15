@@ -2,13 +2,16 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import api from '../services/api';
-import { FaPaperPlane, FaUserCircle, FaImage, FaTimes, FaArrowLeft, FaSmile, FaCheck, FaCheckDouble, FaMicrophone, FaStop, FaTrash, FaArrowRight } from 'react-icons/fa';
+
 import { toast } from 'react-toastify';
 import { formatDistanceToNow } from 'date-fns';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropImage';
 import EmojiPicker from 'emoji-picker-react';
 import AudioPlayer from '../components/AudioPlayer';
+import CreateGroupModal from '../components/CreateGroupModal';
+import GroupInfoModal from '../components/GroupInfoModal';
+import { FaPaperPlane, FaUserCircle, FaImage, FaTimes, FaArrowLeft, FaSmile, FaCheck, FaCheckDouble, FaMicrophone, FaStop, FaTrash, FaArrowRight, FaUsers, FaPlus, FaInfoCircle } from 'react-icons/fa';
 
 const Chat = () => {
   const { user } = useAuth();
@@ -40,6 +43,11 @@ const Chat = () => {
   // Forward State
   const [showForwardModal, setShowForwardModal] = useState(false);
 
+  // Group Chat State
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
+  
+  // Crop State
   // Crop State
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -101,14 +109,33 @@ const Chat = () => {
     if (selectedChat) {
       fetchMessages();
       markMessagesAsRead();
+      // Join chat room (important for groups)
+      socket?.emit('join chat', selectedChat._id);
     }
-  }, [selectedChat, fetchMessages, markMessagesAsRead]);
+  }, [selectedChat, fetchMessages, markMessagesAsRead, socket]);
+
+  // Join all group rooms to receive updates
+  useEffect(() => {
+    if (socket && chatList.length > 0) {
+        chatList.forEach(chat => {
+            if (chat.isGroup) {
+                socket.emit('join chat', chat._id);
+            }
+        });
+    }
+  }, [chatList, socket]);
 
   // Socket listeners
   useEffect(() => {
     if (socket) {
       socket.on('message received', (newMessageReceived) => {
-        if (selectedChat && (newMessageReceived.sender._id === selectedChat._id || newMessageReceived.receiver._id === selectedChat._id)) {
+        const isGroupMsg = newMessageReceived.group;
+        const isCurrentChat = selectedChat && (
+            (isGroupMsg && (newMessageReceived.group._id === selectedChat._id || newMessageReceived.group === selectedChat._id)) ||
+            (!isGroupMsg && newMessageReceived.receiver && (newMessageReceived.sender._id === selectedChat._id || newMessageReceived.receiver._id === selectedChat._id))
+        );
+
+        if (isCurrentChat) {
           setMessages((prev) => [newMessageReceived, ...prev]);
           // Mark as read since user is viewing the chat
           markMessagesAsRead();
@@ -362,6 +389,7 @@ const Chat = () => {
        setShowForwardModal(false);
        setContextMenu({ visible: false, x: 0, y: 0, messageId: null });
     } catch (error) {
+      console.error(error);
       toast.error("Failed to send");
     }
   };
@@ -376,7 +404,12 @@ const Chat = () => {
     if (!newMessage.trim() && !image) return;
 
     const formData = new FormData();
-    formData.append('receiverId', selectedChat._id);
+    if (selectedChat.isGroup) {
+        formData.append('groupId', selectedChat._id);
+    } else {
+        formData.append('receiverId', selectedChat._id);
+    }
+    
     formData.append('content', newMessage);
     if (image) formData.append('image', image);
     if (audioBlob) {
@@ -541,8 +574,15 @@ const Chat = () => {
 
       {/* Chat List Sidebar */}
       <div className={`${selectedChat ? 'hidden md:block' : 'block'} w-full md:w-80 border-r border-slate-800 overflow-y-auto`}>
-        <div className="p-4 border-b border-slate-800">
+        <div className="p-4 border-b border-slate-800 flex justify-between items-center">
           <h2 className="text-xl font-bold text-white">Messages</h2>
+          <button 
+            onClick={() => setShowCreateGroup(true)}
+            className="text-accent hover:text-white transition-colors p-2"
+            title="Create Group"
+          >
+            <FaPlus size={20} />
+          </button>
         </div>
         <div className="divide-y divide-slate-800">
           {chatList.map((chatUser) => (
@@ -596,27 +636,43 @@ const Chat = () => {
         {selectedChat ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-slate-800 flex items-center gap-3">
-              <button
-                onClick={() => setSelectedChat(null)}
-                className="md:hidden text-slate-400 hover:text-white"
-              >
-                <FaArrowLeft size={20} />
-              </button>
-              <div className="relative">
-                <img
-                  src={selectedChat.profileImage || `https://ui-avatars.com/api/?name=${selectedChat.username}&background=random`}
-                  alt={selectedChat.username}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-                {isUserOnline(selectedChat._id) && (
-                  <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-dark rounded-full"></span>
-                )}
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between gap-3">
+              <div onClick={() => selectedChat.isGroup && setShowGroupInfo(true)} className={`flex items-center gap-3 flex-1 min-w-0 ${selectedChat.isGroup ? 'cursor-pointer hover:bg-slate-800/50 p-2 rounded transition-colors' : ''}`}>
+                <button
+                    onClick={(e) => { e.stopPropagation(); setSelectedChat(null); }}
+                    className="md:hidden text-slate-400 hover:text-white mr-2"
+                >
+                    <FaArrowLeft size={20} />
+                </button>
+                <div className="relative">
+                    <img
+                    src={selectedChat.profileImage || `https://ui-avatars.com/api/?name=${selectedChat.username}&background=random`}
+                    alt={selectedChat.username}
+                    className="w-10 h-10 rounded-full object-cover"
+                    />
+                    {!selectedChat.isGroup && isUserOnline(selectedChat._id) && (
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-dark rounded-full"></span>
+                    )}
+                </div>
+                <div>
+                    <p className="font-medium text-white flex items-center gap-2">
+                        {selectedChat.username}
+                        {selectedChat.isGroup && <span className="text-xs bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">Group</span>}
+                    </p>
+                    {typing && <p className="text-xs text-accent">typing...</p>}
+                    {selectedChat.isGroup && !typing && (
+                        <p className="text-xs text-slate-400">
+                            {selectedChat.members?.length || 0} members
+                        </p>
+                    )}
+                </div>
               </div>
-              <div>
-                <p className="font-medium text-white">{selectedChat.username}</p>
-                {typing && <p className="text-xs text-accent">typing...</p>}
-              </div>
+              
+              {selectedChat.isGroup && (
+                  <button onClick={() => setShowGroupInfo(true)} className="text-slate-400 hover:text-white p-2">
+                      <FaInfoCircle size={20} />
+                  </button>
+              )}
             </div>
 
             {/* Messages */}
@@ -656,6 +712,13 @@ const Chat = () => {
                         <p className="text-[10px] text-slate-400 italic mb-1 flex items-center gap-1">
                           <FaArrowRight size={8} /> Forwarded
                         </p>
+                      )}
+
+                      {/* Show sender name in group chat if it's not me */}
+                      {selectedChat.isGroup && message.sender._id !== user._id && (
+                          <p className="text-[10px] font-bold text-accent mb-1">
+                              {message.sender.username}
+                          </p>
                       )}
 
                       {message.content && <p className="text-sm">{message.content}</p>}
@@ -799,11 +862,48 @@ const Chat = () => {
             </form>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-slate-500">
-            <p>Select a chat to start messaging</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
+            <div className="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center mb-4">
+              <FaPaperPlane size={40} className="text-slate-600" />
+            </div>
+            <p className="text-lg font-medium">Select a chat to start messaging</p>
+            <p className="text-sm">or create a new group</p>
           </div>
         )}
       </div>
+      
+      {showCreateGroup && (
+          <CreateGroupModal 
+            onClose={() => setShowCreateGroup(false)} 
+            onGroupCreated={() => {
+                fetchChatList();
+                // Map new group to chat list format if needed, or just fetchChatList
+                // But newGroup from createGroup backend response might differ from chatList format
+                // chatList item has { ...group, isGroup: true, unreadCount: 0 }
+                // Let's just fetchChatList and optionally select it
+            }} 
+          />
+      )}
+
+      {showGroupInfo && selectedChat && selectedChat.isGroup && (
+          <GroupInfoModal 
+            group={selectedChat}
+            onClose={() => setShowGroupInfo(false)}
+            onUpdate={(updatedGroup) => {
+                if (!updatedGroup) {
+                    // Group deleted or left
+                    setSelectedChat(null);
+                    setShowGroupInfo(false);
+                } else {
+                    // Update selected chat with new details
+                    // We need to preserve isGroup: true and other UI props
+                    setSelectedChat(prev => ({ ...prev, ...updatedGroup }));
+                }
+                fetchChatList();
+            }}
+          />
+      )}
+
       {/* Context Menu for Reactions */}
       {contextMenu.visible && (
         <div 
@@ -846,7 +946,7 @@ const Chat = () => {
            <div className="bg-slate-800 rounded-lg p-4 w-full max-w-sm">
               <h3 className="text-white font-bold mb-4">Forward to...</h3>
               <div className="max-h-60 overflow-y-auto flex flex-col gap-2">
-                 {chats.map(chat => (
+                 {chatList.map(chat => (
                     <button 
                       key={chat._id}
                       onClick={() => handleForward(chat._id)}
@@ -856,7 +956,7 @@ const Chat = () => {
                        <span className="text-white">{chat.username}</span>
                     </button>
                  ))}
-                 {chats.length === 0 && <p className="text-slate-400 text-sm">No chats available</p>}
+                 {chatList.length === 0 && <p className="text-slate-400 text-sm">No chats available</p>}
               </div>
               <button onClick={() => setShowForwardModal(false)} className="mt-4 w-full py-2 bg-slate-700 text-white rounded hover:bg-slate-600">
                 Cancel
