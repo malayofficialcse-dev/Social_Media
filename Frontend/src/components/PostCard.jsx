@@ -6,15 +6,20 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import ImageLightbox from './ImageLightbox';
+import InteractionTooltip from './InteractionTooltip';
 
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=User&background=1e293b&color=fff&size=200';
 
 const PostCard = ({ post, onDelete, onUpdate }) => {
   const { user } = useAuth();
-  const [liked, setLiked] = useState(post.likes.includes(user?._id));
-  const [likesCount, setLikesCount] = useState(post.likes.length);
-  const [reposted, setReposted] = useState(post.reposts.includes(user?._id));
-  const [repostsCount, setRepostsCount] = useState(post.reposts.length);
+  
+  // Interaction states
+  const [liked, setLiked] = useState(post.likes?.some(l => (l._id || l) === user?._id));
+  const [likesCount, setLikesCount] = useState(post.likes?.length || 0);
+  const [reposted, setReposted] = useState(post.reposts?.some(r => (r._id || r) === user?._id));
+  const [repostsCount, setRepostsCount] = useState(post.reposts?.length || 0);
+  
+  // UI states
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
   const [showComments, setShowComments] = useState(false);
@@ -22,6 +27,10 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
   const [comments, setComments] = useState([]);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount || 0);
   const [loadingComments, setLoadingComments] = useState(false);
+
+  // Interaction lists for tooltips
+  const [localLikes, setLocalLikes] = useState(post.likes || []);
+  const [localReposts, setLocalReposts] = useState(post.reposts || []);
 
   // Lightbox state
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -69,9 +78,11 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
       if (liked) {
         await api.put(`/posts/${post._id}/unlike`);
         setLikesCount(prev => prev - 1);
+        setLocalLikes(prev => prev.filter(l => (l._id || l) !== user?._id));
       } else {
         await api.put(`/posts/${post._id}/like`);
         setLikesCount(prev => prev + 1);
+        setLocalLikes(prev => [...prev, { _id: user._id, username: user.username, profileImage: user.profileImage }]);
       }
       setLiked(!liked);
     } catch (error) {
@@ -85,6 +96,7 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
       await api.post(`/posts/${post._id}/repost`);
       setReposted(true);
       setRepostsCount(prev => prev + 1);
+      setLocalReposts(prev => [...prev, { _id: user._id, username: user.username, profileImage: user.profileImage }]);
       toast.success("Shared to your feed");
     } catch (error) {
       toast.error(error.response?.data?.message || "Error reposting");
@@ -97,25 +109,24 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
         await api.delete(`/posts/${post._id}`);
         onDelete(post._id);
         toast.success("Post removed");
-      } catch (error) {
-        console.error(error);
-        toast.error("Error deleting post");
-      }
+    } catch {
+      toast.error("Error deleting post");
     }
-  };
+  }
+};
 
-  const handleDeleteComment = async (commentId) => {
-    if (window.confirm("Remove this comment?")) {
-      try {
-        await api.delete(`/comments/${commentId}`);
-        setComments(comments.filter(c => c._id !== commentId));
-        setCommentsCount(prev => prev - 1);
-        toast.success("Comment removed");
-      } catch (error) {
-        toast.error("Error deleting comment");
-      }
+const handleDeleteComment = async (commentId) => {
+  if (window.confirm("Remove this comment?")) {
+    try {
+      await api.delete(`/comments/${commentId}`);
+      setComments(comments.filter(c => c._id !== commentId));
+      setCommentsCount(prev => prev - 1);
+      toast.success("Comment removed");
+    } catch {
+      toast.error("Error deleting comment");
     }
-  };
+  }
+};
 
   const handleUpdate = async () => {
     try {
@@ -249,29 +260,35 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
           )}
 
           <div className="flex items-center gap-2 sm:gap-8 mt-6 pt-4 border-t border-white/5">
-            <button 
-              onClick={handleLike}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${liked ? 'bg-red-500/10 text-red-500' : 'hover:bg-red-500/5 text-slate-500 hover:text-red-500'}`}
-            >
-              {liked ? <FaHeart className="animate-in zoom-in duration-300" /> : <FaRegHeart />}
-              <span className="text-sm font-black">{likesCount}</span>
-            </button>
+            <InteractionTooltip users={localLikes} title="Liked by">
+              <button 
+                onClick={handleLike}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${liked ? 'bg-red-500/10 text-red-500' : 'hover:bg-red-500/5 text-slate-500 hover:text-red-500'}`}
+              >
+                {liked ? <FaHeart className="animate-in zoom-in duration-300" /> : <FaRegHeart />}
+                <span className="text-sm font-black">{likesCount}</span>
+              </button>
+            </InteractionTooltip>
             
-            <button 
-              onClick={toggleComments}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${showComments ? 'bg-accent/10 text-accent' : 'hover:bg-accent/5 text-slate-500 hover:text-accent'}`}
-            >
-              <FaComment />
-              <span className="text-sm font-black">{commentsCount}</span> 
-            </button>
+            <InteractionTooltip users={post.commenters} title="Commented by">
+              <button 
+                onClick={toggleComments}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${showComments ? 'bg-accent/10 text-accent' : 'hover:bg-accent/5 text-slate-500 hover:text-accent'}`}
+              >
+                <FaComment />
+                <span className="text-sm font-black">{commentsCount}</span> 
+              </button>
+            </InteractionTooltip>
             
-            <button 
-              onClick={handleRepost}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${reposted ? 'bg-green-500/10 text-green-500' : 'hover:bg-green-500/5 text-slate-500 hover:text-green-500'}`}
-            >
-              <FaRetweet className={reposted ? 'rotate-180 transition-transform duration-500' : ''} />
-              <span className="text-sm font-black">{repostsCount}</span>
-            </button>
+            <InteractionTooltip users={localReposts} title="Shared by">
+              <button 
+                onClick={handleRepost}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${reposted ? 'bg-green-500/10 text-green-500' : 'hover:bg-green-500/5 text-slate-500 hover:text-green-500'}`}
+              >
+                <FaRetweet className={reposted ? 'rotate-180 transition-transform duration-500' : ''} />
+                <span className="text-sm font-black">{repostsCount}</span>
+              </button>
+            </InteractionTooltip>
           </div>
 
           <div className={`mt-4 space-y-4 animate-in fade-in duration-500 ${visibleComments.length > 0 ? 'pt-4 border-t border-white/5' : ''}`}>

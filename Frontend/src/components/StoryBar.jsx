@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { FaPlus, FaTimes, FaEye, FaChevronLeft, FaChevronRight, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaEye, FaChevronLeft, FaChevronRight, FaTrash, FaHeart, FaRegHeart } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
 import CreateStoryModal from './CreateStoryModal';
@@ -9,58 +9,51 @@ import CreateStoryModal from './CreateStoryModal';
 const StoryBar = () => {
   const { user } = useAuth();
   const [stories, setStories] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selectedStoryGroup, setSelectedStoryGroup] = useState(null);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showViewersList, setShowViewersList] = useState(false);
   const audioRef = useRef(null);
 
-  useEffect(() => {
-    fetchStories();
-  }, []);
-
-  const fetchStories = async () => {
+  const fetchStories = useCallback(async () => {
     try {
       const { data } = await api.get('/stories');
       setStories(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
+    } catch {
+      // Error handled silently
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchStories();
+  }, [fetchStories]);
 
   const handleStoryCreated = () => {
     fetchStories();
   };
 
-  const openStory = (group) => {
-    setSelectedStoryGroup(group);
-    setCurrentStoryIndex(0);
-    // Mark first as viewed
-    markAsViewed(group.stories[0]._id);
-  };
-
   const markAsViewed = async (storyId) => {
     try {
       await api.put(`/stories/${storyId}/view`);
-    } catch (e) { console.error(e) }
+    } catch { /* Ignore */ }
   };
 
-  const nextStory = () => {
+  const closeStory = useCallback(() => {
+    setSelectedStoryGroup(null);
+    setCurrentStoryIndex(0);
+    setShowViewersList(false);
+  }, []);
+
+  const nextStory = useCallback(() => {
     if (!selectedStoryGroup) return;
     if (currentStoryIndex < selectedStoryGroup.stories.length - 1) {
       const nextIndex = currentStoryIndex + 1;
       setCurrentStoryIndex(nextIndex);
       markAsViewed(selectedStoryGroup.stories[nextIndex]._id);
     } else {
-      // Move to next user
       const currentGroupIndex = stories.findIndex(g => g.user._id === selectedStoryGroup.user._id);
       if (currentGroupIndex !== -1 && currentGroupIndex < stories.length - 1) {
          const nextGroup = stories[currentGroupIndex + 1];
-         // Reset state for new group
-         if (audioRef.current) audioRef.current.pause();
          setSelectedStoryGroup(nextGroup);
          setCurrentStoryIndex(0);
          markAsViewed(nextGroup.stories[0]._id);
@@ -68,7 +61,7 @@ const StoryBar = () => {
          closeStory();
       }
     }
-  };
+  }, [selectedStoryGroup, currentStoryIndex, stories, closeStory]);
 
   const prevStory = () => {
     if (currentStoryIndex > 0) {
@@ -76,11 +69,33 @@ const StoryBar = () => {
     }
   };
 
-  const closeStory = () => {
-    if (audioRef.current) audioRef.current.pause();
-    setSelectedStoryGroup(null);
+  const handleLikeStory = async (storyId) => {
+    const currentStory = selectedStoryGroup.stories[currentStoryIndex];
+    const isLiked = currentStory.likes?.some(l => (l._id || l) === user._id);
+    
+    try {
+      if (isLiked) {
+        await api.put(`/stories/${storyId}/unlike`);
+        const updatedStories = [...selectedStoryGroup.stories];
+        updatedStories[currentStoryIndex].likes = updatedStories[currentStoryIndex].likes.filter(l => (l._id || l) !== user._id);
+        setSelectedStoryGroup({ ...selectedStoryGroup, stories: updatedStories });
+      } else {
+        await api.put(`/stories/${storyId}/like`);
+        const updatedStories = [...selectedStoryGroup.stories];
+        if (!updatedStories[currentStoryIndex].likes) updatedStories[currentStoryIndex].likes = [];
+        updatedStories[currentStoryIndex].likes.push({ _id: user._id, username: user.username, profileImage: user.profileImage });
+        setSelectedStoryGroup({ ...selectedStoryGroup, stories: updatedStories });
+        toast.success("Reaction sent");
+      }
+    } catch {
+      toast.error("Failed to react");
+    }
+  };
+
+  const openStory = (group) => {
+    setSelectedStoryGroup(group);
     setCurrentStoryIndex(0);
-    setShowViewersList(false);
+    markAsViewed(group.stories[0]._id);
   };
 
   const deleteCurrentStory = async () => {
@@ -93,7 +108,7 @@ const StoryBar = () => {
       toast.success("Deleted");
       closeStory();
       fetchStories();
-    } catch (e) {
+    } catch {
        toast.error("Failed to delete");
     }
   };
@@ -102,27 +117,23 @@ const StoryBar = () => {
   useEffect(() => {
     if (!selectedStoryGroup) return;
     const currentStory = selectedStoryGroup.stories[currentStoryIndex];
-    if (currentStory.type === 'video') return; // Video handles its own end
+    if (currentStory.type === 'video') return;
 
-    // Timer based on duration (default 5s or audioDuration if higher but max 30)
-    // Actually our model says audioDuration default 0.
-    // Let's use 5000ms base, or if audio present, use audioDuration * 1000
-    // But safely.
     const duration = currentStory.audio && currentStory.audioDuration ? currentStory.audioDuration * 1000 : 5000;
+    const audioEl = audioRef.current;
     
-    // Play Audio logic
-    if (currentStory.audio && audioRef.current) {
-        audioRef.current.src = currentStory.audio;
-        audioRef.current.currentTime = currentStory.audioStart || 0;
-        audioRef.current.play().catch(e => console.log("Audio play error", e));
+    if (currentStory.audio && audioEl) {
+        audioEl.src = currentStory.audio;
+        audioEl.currentTime = currentStory.audioStart || 0;
+        audioEl.play().catch(() => {});
     }
 
     const timer = setTimeout(nextStory, duration);
     return () => {
         clearTimeout(timer);
-        if (audioRef.current) audioRef.current.pause();
+        if (audioEl) audioEl.pause();
     };
-  }, [selectedStoryGroup, currentStoryIndex]);
+  }, [selectedStoryGroup, currentStoryIndex, nextStory]);
 
   return (
     <div className="w-full bg-slate-800 p-4 rounded-lg mb-6 overflow-x-auto scrollbar-hide">
@@ -134,7 +145,7 @@ const StoryBar = () => {
             onClick={() => setShowCreateModal(true)}
           >
              <FaPlus className="text-slate-400" />
-             <img src={user?.profileImage || `https://ui-avatars.com/api/?name=${user?.username}`} className="absolute inset-0 w-full h-full rounded-full opacity-30 object-cover -z-10" />
+             <img src={user?.profileImage || `https://ui-avatars.com/api/?name=${user?.username}`} className="absolute inset-0 w-full h-full rounded-full opacity-30 object-cover -z-10" alt="Me" />
           </div>
           <span className="text-xs mt-2 text-slate-300">Add Story</span>
         </div>
@@ -215,7 +226,7 @@ const StoryBar = () => {
                  ) : (
                     selectedStoryGroup.stories[currentStoryIndex].viewers.map((v, i) => (
                       <div key={i} className="flex items-center gap-2 mb-2">
-                        <img src={v.user?.profileImage || `https://ui-avatars.com/api/?name=${v.user?.username || 'U'}`} className="w-6 h-6 rounded-full" />
+                        <img src={v.user?.profileImage || `https://ui-avatars.com/api/?name=${v.user?.username || 'U'}`} className="w-6 h-6 rounded-full" alt="avatar" />
                         <span className="text-white text-xs">{v.user?.username || 'Unknown'}</span>
                         <span className="text-[10px] text-slate-500 ml-auto">{new Date(v.viewedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                       </div>
@@ -238,50 +249,82 @@ const StoryBar = () => {
                <img 
                  src={selectedStoryGroup.stories[currentStoryIndex].media} 
                  className="w-full h-full object-contain" 
+                 alt="story"
                />
              )}
              
              {/* Text Overlay */}
              {selectedStoryGroup.stories[currentStoryIndex].textContent && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 w-full">
-                    <p className="bg-black/50 text-white px-4 py-2 text-xl font-bold rounded backdrop-blur-sm max-w-[80%] text-center break-words">
+                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none z-10 w-full px-10">
+                    <p className="bg-black/30 backdrop-blur-md text-white px-6 py-4 text-2xl font-black rounded-2xl border border-white/10 shadow-2xl text-center break-words max-w-full transform -rotate-1">
                         {selectedStoryGroup.stories[currentStoryIndex].textContent}
                     </p>
+                </div>
+             )}
+
+             {/* Likes List (if mine) */}
+             {selectedStoryGroup.user._id === user._id && selectedStoryGroup.stories[currentStoryIndex].likes?.length > 0 && (
+                <div className="absolute bottom-16 right-4 flex -space-x-2 z-50">
+                  {selectedStoryGroup.stories[currentStoryIndex].likes.slice(0, 3).map((l, i) => (
+                    <div key={i} className="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center overflow-hidden">
+                       <FaHeart className="text-red-500 text-[10px]" />
+                    </div>
+                  ))}
+                  {selectedStoryGroup.stories[currentStoryIndex].likes.length > 3 && (
+                    <div className="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] text-white font-bold">
+                      +{selectedStoryGroup.stories[currentStoryIndex].likes.length - 3}
+                    </div>
+                  )}
                 </div>
              )}
 
              {/* Hidden Audio Player */}
              <audio ref={audioRef} className="hidden" />
              
-             {/* Reply Input */}
-             {selectedStoryGroup.user._id !== user._id && (
-               <div className="absolute bottom-4 w-full px-4 z-40">
-                 <form 
-                   onSubmit={async (e) => {
-                     e.preventDefault();
-                     const text = e.target.reply.value;
-                     if (!text) return;
-                     try {
-                       await api.post('/messages', {
-                         receiverId: selectedStoryGroup.user._id,
-                         content: `Replying to your story: ${text}`
-                       });
-                       toast.success("Reply sent");
-                       e.target.reset();
-                     } catch (err) { toast.error("Failed to send reply"); }
-                   }}
-                   className="flex gap-2"
-                 >
-                   <input 
-                     name="reply"
-                     placeholder="Reply to story..." 
-                     className="flex-1 bg-transparent border border-white/50 rounded-full py-2 px-4 text-white placeholder:text-white/70 focus:outline-none focus:border-white backdrop-blur-sm"
-                     onClick={(e) => e.stopPropagation()}
-                   />
-                   <button type="submit" className="text-white font-bold" onClick={(e) => e.stopPropagation()}>Send</button>
-                 </form>
-               </div>
-             )}
+             {/* Interaction Bar */}
+             <div className="absolute bottom-4 w-full px-4 z-40 flex items-center gap-3">
+               {selectedStoryGroup.user._id !== user._id ? (
+                 <>
+                   <form 
+                     onSubmit={async (e) => {
+                       e.preventDefault();
+                       const text = e.target.reply.value;
+                       if (!text) return;
+                       try {
+                         await api.post('/messages', {
+                           receiverId: selectedStoryGroup.user._id,
+                           content: `Replying to your story: ${text}`
+                         });
+                         toast.success("Reply sent");
+                         e.target.reset();
+                       } catch { toast.error("Failed to send reply"); }
+                     }}
+                     className="flex-1 flex gap-2"
+                   >
+                     <input 
+                       name="reply"
+                       placeholder="Reply to story..." 
+                       className="flex-1 bg-white/10 border border-white/20 rounded-full py-2.5 px-5 text-white placeholder:text-white/50 focus:outline-none focus:border-white/40 backdrop-blur-md transition-all text-sm"
+                       onClick={(e) => e.stopPropagation()}
+                     />
+                   </form>
+                   <button 
+                     onClick={(e) => { e.stopPropagation(); handleLikeStory(selectedStoryGroup.stories[currentStoryIndex]._id); }}
+                     className={`p-3 rounded-full backdrop-blur-md transition-all transform active:scale-125 ${
+                       selectedStoryGroup.stories[currentStoryIndex].likes?.some(l => (l._id || l) === user._id)
+                       ? 'bg-red-500 text-white shadow-lg shadow-red-500/30' 
+                       : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
+                     }`}
+                   >
+                     {selectedStoryGroup.stories[currentStoryIndex].likes?.some(l => (l._id || l) === user._id) ? <FaHeart size={20} className="animate-in zoom-in" /> : <FaRegHeart size={20} />}
+                   </button>
+                 </>
+               ) : (
+                 <div className="w-full flex justify-center">
+                    <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">Viewing your story</p>
+                 </div>
+               )}
+             </div>
           </div>
         </div>
       )}

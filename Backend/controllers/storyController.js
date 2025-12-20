@@ -1,10 +1,76 @@
 import asyncHandler from "express-async-handler";
 import Story from "../Models/Story.js";
 import User from "../Models/User.js";
+import Notification from "../Models/Notification.js";
 
 // @desc    Create a new story
 // @route   POST /api/stories
 // @access  Private
+
+// @desc    Like a story
+// @route   PUT /api/stories/:id/like
+// @access  Private
+export const likeStory = asyncHandler(async (req, res) => {
+  const story = await Story.findById(req.params.id);
+
+  if (!story) {
+    res.status(404);
+    throw new Error("Story not found");
+  }
+
+  if (story.likes.includes(req.user._id)) {
+    res.status(400);
+    throw new Error("Story already liked");
+  }
+
+  story.likes.push(req.user._id);
+  await story.save();
+
+  // Create notification
+  if (story.user.toString() !== req.user._id.toString()) {
+    const notification = await Notification.create({
+      recipient: story.user,
+      sender: req.user._id,
+      type: "story_like",
+      story: story._id,
+    });
+
+    const fullNotification = await Notification.findById(notification._id)
+      .populate("sender", "username profileImage");
+
+    if (req.io) {
+      req.io.to(story.user.toString()).emit("notification received", {
+        type: "story_like",
+        sender: {
+           _id: req.user._id,
+           username: req.user.username,
+           profileImage: req.user.profileImage
+        },
+        story: story._id,
+        content: `${req.user.username} liked your story`
+      });
+    }
+  }
+
+  res.json({ success: true, likes: story.likes });
+});
+
+// @desc    Unlike a story
+// @route   PUT /api/stories/:id/unlike
+// @access  Private
+export const unlikeStory = asyncHandler(async (req, res) => {
+  const story = await Story.findById(req.params.id);
+
+  if (!story) {
+    res.status(404);
+    throw new Error("Story not found");
+  }
+
+  story.likes = story.likes.filter(id => id.toString() !== req.user._id.toString());
+  await story.save();
+
+  res.json({ success: true, likes: story.likes });
+});
 export const createStory = asyncHandler(async (req, res) => {
   // Support both single file (old) and fields (new)
   let mediaPath = null;

@@ -28,23 +28,33 @@ export const getPosts = async (req, res) => {
   try {
     const posts = await Post.find()
       .populate("author_id", "username email profileImage")
-      .populate("originalPost")
+      .populate("likes", "username profileImage")
+      .populate("reposts", "username profileImage")
       .populate({
         path: "originalPost",
-        populate: {
-          path: "author_id",
-          select: "username email profileImage"
-        }
+        populate: [
+          { path: "author_id", select: "username email profileImage" },
+          { path: "likes", select: "username profileImage" },
+          { path: "reposts", select: "username profileImage" }
+        ]
       })
       .sort({ createdAt: -1 });
 
     const postsWithCounts = await Promise.all(posts.map(async (post) => {
       const commentsCount = await Comment.countDocuments({ post_id: post._id });
-      const lastComments = await Comment.find({ post_id: post._id })
-        .sort({ createdAt: -1 })
-        .limit(2)
+      const comments = await Comment.find({ post_id: post._id })
         .populate("author_id", "username profileImage");
-      return { ...post.toObject(), commentsCount, lastComments };
+      
+      const lastComments = comments.slice(-2);
+      
+      // Extract unique commenters
+      const commentersMap = new Map();
+      comments.forEach(c => {
+        if (c.author_id) commentersMap.set(c.author_id._id.toString(), c.author_id);
+      });
+      const commenters = Array.from(commentersMap.values());
+
+      return { ...post.toObject(), commentsCount, lastComments, commenters };
     }));
 
     res.json(postsWithCounts);
@@ -235,19 +245,32 @@ export const getUserPosts = async (req, res) => {
   try {
     const posts = await Post.find({ author_id: req.params.userId })
       .populate("author_id", "username email profileImage")
-      .populate("originalPost")
+      .populate("likes", "username profileImage")
+      .populate("reposts", "username profileImage")
       .populate({
         path: "originalPost",
-        populate: {
-          path: "author_id",
-          select: "username email profileImage"
-        }
+        populate: [
+          { path: "author_id", select: "username email profileImage" },
+          { path: "likes", select: "username profileImage" },
+          { path: "reposts", select: "username profileImage" }
+        ]
       })
       .sort({ createdAt: -1 });
 
     const postsWithCounts = await Promise.all(posts.map(async (post) => {
       const commentsCount = await Comment.countDocuments({ post_id: post._id });
-      return { ...post.toObject(), commentsCount };
+      const comments = await Comment.find({ post_id: post._id })
+        .populate("author_id", "username profileImage");
+      
+      const lastComments = comments.slice(-2);
+      
+      const commentersMap = new Map();
+      comments.forEach(c => {
+        if (c.author_id) commentersMap.set(c.author_id._id.toString(), c.author_id);
+      });
+      const commenters = Array.from(commentersMap.values());
+
+      return { ...post.toObject(), commentsCount, lastComments, commenters };
     }));
 
     res.json(postsWithCounts);
