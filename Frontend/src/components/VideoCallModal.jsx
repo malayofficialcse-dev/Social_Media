@@ -29,10 +29,23 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
     ],
   };
 
+  const isMounted = useRef(true);
+
   useEffect(() => {
+    isMounted.current = true;
     const initCall = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        console.log("Requesting media permissions...");
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { width: 1280, height: 720 }, 
+          audio: true 
+        });
+
+        if (!isMounted.current) {
+          stream.getTracks().forEach(t => t.stop());
+          return;
+        }
+
         setLocalStream(stream);
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
@@ -43,12 +56,14 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
         });
 
         peerConnectionRef.current.ontrack = (event) => {
-          setRemoteStream(event.streams[0]);
-          if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
+          if (isMounted.current) {
+            setRemoteStream(event.streams[0]);
+            if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
+          }
         };
 
         peerConnectionRef.current.onicecandidate = (event) => {
-          if (event.candidate) {
+          if (event.candidate && isMounted.current) {
             socket.emit('ice-candidate', { to: partner._id, candidate: event.candidate });
           }
         };
@@ -72,7 +87,13 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
         }
       } catch (err) {
         console.error("Call initialization failed", err);
-        toast.error("Could not access camera/microphone");
+        if (err.name === 'NotAllowedError') {
+          toast.error("Camera/Microphone access denied. Please allow permissions in your browser.");
+        } else if (err.name === 'NotReadableError') {
+          toast.error("Hardware busy. Please close other apps using your camera/mic.");
+        } else {
+          toast.error("Could not start video call. Check your hardware.");
+        }
         onHangup();
       }
     };
@@ -111,6 +132,7 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
     socket.on('call-rejected', handleCallRejected);
 
     return () => {
+      isMounted.current = false;
       socket.off('call-accepted', handleCallAccepted);
       socket.off('ice-candidate', handleIceCandidate);
       socket.off('call-ended', handleCallEnded);
