@@ -38,6 +38,7 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
   }, [onHangup]);
 
   const isMounted = useRef(true);
+  const initStarted = useRef(false);
 
   // Sync streams with video elements
   useEffect(() => {
@@ -54,6 +55,8 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
 
   useEffect(() => {
     isMounted.current = true;
+    if (initStarted.current) return;
+    initStarted.current = true;
     
     const processQueuedCandidates = async () => {
       while (candidateQueue.current.length > 0 && peerConnectionRef.current?.remoteDescription) {
@@ -69,8 +72,14 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
     const initCall = async () => {
       try {
         console.log("Requesting media permissions...");
+        
+        // Ensure any previous stream is closed first
+        if (localStreamRef.current) {
+          localStreamRef.current.getTracks().forEach(t => t.stop());
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { width: 1280, height: 720 }, 
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } }, 
           audio: true 
         });
 
@@ -96,10 +105,11 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
             if (remoteStream) {
               setRemoteStream(remoteStream);
             } else {
-              // Fallback for browsers that don't provide the stream in the event
               setRemoteStream(prev => {
                 const newStream = prev || new MediaStream();
-                newStream.addTrack(event.track);
+                if (!newStream.getTracks().find(t => t.id === event.track.id)) {
+                  newStream.addTrack(event.track);
+                }
                 return new MediaStream(newStream.getTracks());
               });
             }
@@ -133,9 +143,9 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
       } catch (err) {
         console.error("Call initialization failed", err);
         if (err.name === 'NotAllowedError') {
-          toast.error("Camera/Microphone access denied. Please allow permissions.");
+          toast.error("Camera/Microphone access denied.");
         } else if (err.name === 'NotReadableError') {
-          toast.error("Hardware busy. Close other apps using your camera/mic.");
+          toast.error("Hardware busy. Close other apps using your camera/mic and REFRESH.");
         } else {
           toast.error("Could not start video call. Check hardware.");
         }
@@ -143,7 +153,12 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
       }
     };
 
-    initCall();
+    // Delay slightly to allow hardware to settle from any previous use
+    const timer = setTimeout(() => {
+      if (isMounted.current) {
+        initCall();
+      }
+    }, 500);
 
     const handleCallAccepted = async (signal) => {
       try {
@@ -194,11 +209,15 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
       
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach(track => track.stop());
+        localStreamRef.current = null;
       }
       if (peerConnectionRef.current) {
         peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
       }
+      clearTimeout(timer);
     };
+    // Note: Dependencies kept to essential identity factors to avoid re-mounting logic mid-call
   }, [partner._id, callType, incomingSignal, socket, user._id, user.username]);
 
   const toggleMute = () => {
@@ -223,7 +242,7 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
 
   const hangup = () => {
     socket.emit('end-call', { to: partner._id });
-    onHangup();
+    onHangupRef.current();
   };
 
   return (
