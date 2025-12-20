@@ -2,37 +2,42 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 
 const RightSidebar = () => {
-  const [suggestions, setSuggestions] = useState([]);
+  const [users, setUsers] = useState([]);
   const [followedState, setFollowedState] = useState({});
   const { user, fetchUser } = useAuth();
+  const { onlineUsers } = useSocket();
+
+  const isUserOnline = (userId) => {
+    return onlineUsers?.some(u => u.userId === userId);
+  };
 
   useEffect(() => {
-    const fetchSuggestions = async () => {
+    const fetchUsers = async () => {
       try {
-        const { data } = await api.get('/users/suggestions');
-        setSuggestions(data);
+        const { data } = await api.get('/users/suggestions'); // This endpoint now returns all users
+        setUsers(data);
       } catch (error) {
-        console.error("Error fetching suggestions", error);
+        console.error("Error fetching users", error);
       }
     };
-    fetchSuggestions();
+    fetchUsers();
   }, []);
 
   useEffect(() => {
-    if (user && user.following) {
-      const initialFollowedState = {};
+    if (user?.following) {
+      const newState = {};
       user.following.forEach(f => {
         const id = typeof f === 'object' ? f._id : f;
-        initialFollowedState[id] = true;
+        newState[id] = true;
       });
-      setFollowedState(initialFollowedState);
+      setFollowedState(newState);
     }
   }, [user]);
 
   const handleFollow = async (id) => {
-    // Optimistic update
     const isFollowing = !!followedState[id];
     setFollowedState(prev => ({ ...prev, [id]: !isFollowing }));
 
@@ -42,52 +47,68 @@ const RightSidebar = () => {
       } else {
         await api.put(`/users/${id}/follow`);
       }
-      // Sync global state
       fetchUser();
     } catch (error) {
       console.error("Error following/unfollowing user", error);
-      // Revert on error
       setFollowedState(prev => ({ ...prev, [id]: isFollowing }));
     }
   };
 
   return (
-    <div className="fixed right-0 top-[73px] h-[calc(100vh-73px)] w-80 bg-dark border-l border-slate-800 p-6 hidden lg:block overflow-y-auto z-40">
-      <h2 className="text-xl font-bold mb-6">Who to follow</h2>
-      <div className="space-y-6">
-        {suggestions.map((suggestion) => {
-          const isFollowing = !!followedState[suggestion._id];
-          return (
-            <div key={suggestion._id} className="flex items-center justify-between">
-              <Link to={`/profile/${suggestion._id}`} className="flex items-center gap-3 group">
-                <img 
-                  src={suggestion.profileImage || "https://via.placeholder.com/40"} 
-                  alt={suggestion.username} 
-                  className="w-10 h-10 rounded-full object-cover group-hover:opacity-80 transition-opacity" 
-                />
-                <div>
-                  <p className="font-medium text-white group-hover:text-accent transition-colors">{suggestion.username}</p>
-                  <p className="text-xs text-slate-500">Suggested for you</p>
-                </div>
-              </Link>
-              <button 
-                onClick={() => handleFollow(suggestion._id)}
-                className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${
-                  isFollowing
-                  ? 'bg-transparent border border-slate-500 text-slate-300 hover:border-red-500 hover:text-red-500' 
-                  : 'bg-white text-dark hover:bg-slate-200'
-                }`}
-              >
-                {isFollowing ? 'Unfollow' : 'Follow'}
-              </button>
+    <aside className="fixed right-0 top-16 h-[calc(100vh-64px)] w-80 p-6 hidden xl:block overflow-y-auto z-40">
+      <div className="card h-full flex flex-col glass border-none">
+        <h2 className="text-xl font-black mb-6 tracking-tight gradient-text inline-block">All Users</h2>
+        <div className="space-y-5 flex-1 overflow-y-auto pr-2 scrollbar-thin">
+          {users.map((u) => {
+            const isFollowing = !!followedState[u._id];
+            return (
+              <div key={u._id} className="flex items-center justify-between group/item p-2 -mx-2 rounded-2xl hover:bg-white/5 transition-all">
+                <Link to={`/profile/${u._id}`} className="flex items-center gap-3 shrink-0">
+                  <div className="relative">
+                    <img 
+                      src={u.profileImage || "https://via.placeholder.com/40"} 
+                      alt={u.username} 
+                      className="w-10 h-10 rounded-full object-cover border-2 border-white/5 shadow-md group-hover/item:border-accent/30 transition-all" 
+                    />
+                    {isUserOnline(u._id) && (
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full"></div>
+                    )}
+                    <div className="absolute inset-0 rounded-full bg-accent/10 opacity-0 group-hover/item:opacity-100 transition-opacity"></div>
+                  </div>
+                  <div className="overflow-hidden">
+                    <p className="font-bold text-white text-sm truncate w-24">{u.username}</p>
+                    <p className="text-[10px] text-slate-500 font-medium">Community Member</p>
+                  </div>
+                </Link>
+                <button 
+                  onClick={() => handleFollow(u._id)}
+                  className={`text-[11px] font-black px-4 py-1.5 rounded-full transition-all uppercase tracking-wider ${
+                    isFollowing
+                    ? 'bg-slate-800 text-slate-400 hover:bg-red-500 hover:text-white' 
+                    : 'bg-white text-[#0f172a] hover:bg-accent hover:text-white shadow-lg shadow-white/5 hover:shadow-accent/20'
+                  }`}
+                >
+                  {isFollowing ? 'Unfollow' : 'Follow'}
+                </button>
+              </div>
+            );
+          })}
+          {users.length === 0 && (
+            <div className="text-center py-10">
+              <p className="text-slate-500 text-sm italic font-medium">No users found.</p>
             </div>
-          );
-        })}
-        {suggestions.length === 0 && (
-          <p className="text-slate-500 text-sm">No suggestions available.</p>
-        )}
+          )}
+        </div>
+        <div className="mt-auto pt-6 border-t border-white/5">
+          <p className="text-[10px] text-slate-600 font-bold uppercase tracking-[0.2em] mb-4">Trending Tags</p>
+          <div className="flex flex-wrap gap-2">
+            {['#technology', '#pconnect', '#lifestyle'].map(tag => (
+              <span key={tag} className="text-[10px] font-bold text-slate-400 hover:text-accent cursor-pointer transition-colors bg-white/5 px-2 py-1 rounded-md">{tag}</span>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+    </aside>
   );
 };
 

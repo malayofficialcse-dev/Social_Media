@@ -37,14 +37,19 @@ const Home = () => {
   };
 
   if (loading) {
-    return <div className="flex justify-center pt-10 text-accent">Loading...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center pt-20 animate-in fade-in duration-700">
+        <div className="w-12 h-12 border-4 border-accent/20 border-t-accent rounded-full animate-spin mb-4"></div>
+        <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-xs">Syncing Feed</p>
+      </div>
+    );
   }
 
   return (
-    <div>
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
       <StoryBar />
       <CreatePost onPostCreated={handlePostCreated} />
-      <div className="space-y-4">
+      <div className="space-y-6 pb-20">
         {posts.map(post => (
           <PostCard 
             key={post._id} 
@@ -54,7 +59,9 @@ const Home = () => {
           />
         ))}
         {posts.length === 0 && (
-          <p className="text-center text-slate-500 mt-10">No posts yet. Be the first to post!</p>
+          <div className="card text-center py-20 border-dashed border-white/5">
+            <p className="text-slate-500 font-medium">No one has shared anything yet. Why not be the first?</p>
+          </div>
         )}
       </div>
     </div>

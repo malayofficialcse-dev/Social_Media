@@ -36,6 +36,8 @@ app.use(cors({
 }));
 app.use(express.json());
 
+import User from "./Models/User.js";
+
 // Make io accessible to our router
 app.use((req, res, next) => {
   req.io = io;
@@ -48,12 +50,15 @@ let onlineUsers = [];
 io.on("connection", (socket) => {
   console.log("Connected to socket.io");
 
-  socket.on("setup", (userData) => {
+  socket.on("setup", async (userData) => {
     socket.join(userData._id);
     console.log("User joined room:", userData._id);
-    if (!onlineUsers.some((u) => u.userId === userData._id)) {
+    
+    // Add this specific socket to online users
+    if (!onlineUsers.some((u) => u.socketId === socket.id)) {
       onlineUsers.push({ userId: userData._id, socketId: socket.id });
     }
+    
     io.emit("getOnlineUsers", onlineUsers);
   });
 
@@ -66,33 +71,58 @@ io.on("connection", (socket) => {
   socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
   socket.on("new message", (newMessageRecieved) => {
-    // Check if it's a group message
     if (newMessageRecieved.group) {
-        // Emit to the group room (roomId = groupId)
         socket.in(newMessageRecieved.group._id || newMessageRecieved.group).emit("message received", newMessageRecieved);
     } else {
-        // For simple 1-on-1:
         const receiverId = newMessageRecieved.receiver ? (newMessageRecieved.receiver._id || newMessageRecieved.receiver) : null;
-
-        if (!receiverId) return console.log("Receiver not defined");
-
-        // Emit to receiver
+        if (!receiverId) return;
         socket.in(receiverId).emit("message received", newMessageRecieved);
-        
-        // Also emit notification
         socket.in(receiverId).emit("notification received", {
           type: 'message',
           sender: newMessageRecieved.sender,
           content: newMessageRecieved.content,
-          chatId: newMessageRecieved.sender._id // Navigate to this chat
+          chatId: newMessageRecieved.sender._id
         });
     }
   });
 
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
     console.log("USER DISCONNECTED");
-    onlineUsers = onlineUsers.filter((u) => u.socketId !== socket.id);
-    io.emit("getOnlineUsers", onlineUsers);
+    const disconnectedUser = onlineUsers.find(u => u.socketId === socket.id);
+    if (disconnectedUser) {
+        try {
+            await User.findByIdAndUpdate(disconnectedUser.userId, { 
+                lastSeen: new Date() 
+            });
+        } catch (err) {
+            console.error("Error updating last seen:", err);
+        }
+        onlineUsers = onlineUsers.filter((u) => u.socketId !== socket.id);
+        io.emit("getOnlineUsers", onlineUsers);
+    }
+  });
+
+  // WebRTC Signaling
+  socket.on("call-user", ({ userToCall, signalData, from, name }) => {
+    console.log(`Call from ${name} to ${userToCall}`);
+    io.to(userToCall).emit("incoming-call", { signal: signalData, from, name });
+  });
+
+  socket.on("answer-call", ({ to, signal }) => {
+    console.log(`Answering call to ${to}`);
+    io.to(to).emit("call-accepted", signal);
+  });
+
+  socket.on("ice-candidate", ({ to, candidate }) => {
+    io.to(to).emit("ice-candidate", candidate);
+  });
+
+  socket.on("reject-call", ({ to }) => {
+    io.to(to).emit("call-rejected");
+  });
+
+  socket.on("end-call", ({ to }) => {
+    io.to(to).emit("call-ended");
   });
 });
 

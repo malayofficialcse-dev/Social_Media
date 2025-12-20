@@ -56,11 +56,9 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
     try {
       const { data } = await api.post(`/comments/${post._id}`, { content: commentText });
       setCommentText('');
-      toast.success("Comment added!");
-      // Update local state immediately
+      toast.success("Comment shared");
       setComments(prev => [data, ...prev]);
       setCommentsCount(prev => prev + 1);
-      // Also update post.lastComments if needed (optional, but good for UI consistency)
     } catch (error) {
       toast.error(error.response?.data?.message || "Error adding comment");
     }
@@ -83,22 +81,22 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
 
   const handleRepost = async () => {
     try {
-      if (reposted) return; // Already reposted
+      if (reposted) return;
       await api.post(`/posts/${post._id}/repost`);
       setReposted(true);
       setRepostsCount(prev => prev + 1);
-      toast.success("Post reposted!");
+      toast.success("Shared to your feed");
     } catch (error) {
       toast.error(error.response?.data?.message || "Error reposting");
     }
   };
 
   const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this post?")) {
+    if (window.confirm("Remove this post permanently?")) {
       try {
         await api.delete(`/posts/${post._id}`);
         onDelete(post._id);
-        toast.success("Post deleted");
+        toast.success("Post removed");
       } catch (error) {
         console.error(error);
         toast.error("Error deleting post");
@@ -107,12 +105,12 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
   };
 
   const handleDeleteComment = async (commentId) => {
-    if (window.confirm("Are you sure you want to delete this comment?")) {
+    if (window.confirm("Remove this comment?")) {
       try {
         await api.delete(`/comments/${commentId}`);
         setComments(comments.filter(c => c._id !== commentId));
         setCommentsCount(prev => prev - 1);
-        toast.success("Comment deleted");
+        toast.success("Comment removed");
       } catch (error) {
         toast.error("Error deleting comment");
       }
@@ -137,214 +135,216 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
 
   const displayPost = post.isRepost ? post.originalPost : post;
   
-  if (!displayPost) return null; // Handle case where original post is deleted
+  if (!displayPost) return null;
 
-  // Determine which comments to show
-  // If showComments is true, show 'comments' state (fetched from API)
-  // If showComments is false, show 'post.lastComments' (passed from parent/backend)
   const visibleComments = showComments ? comments : (post.lastComments || []);
 
   return (
-    <div className="card mb-4 hover:bg-slate-800/50 transition-colors">
+    <article className="card mb-6 overflow-hidden border-white/5 hover:border-white/10 group/card">
       {post.isRepost && (
-        <div className="flex items-center gap-2 text-slate-500 text-sm mb-2 ml-2">
-          <FaRetweet />
-          <span>{post.author_id.username} reposted</span>
+        <div className="flex items-center gap-2 text-slate-500 text-[11px] font-black uppercase tracking-wider mb-4 px-1">
+          <FaRetweet className="text-green-500" />
+          <span>{post.author_id.username} Shared</span>
         </div>
       )}
       
       <div className="flex gap-4">
-        <Link to={`/profile/${displayPost.author_id._id}`}>
-          <img 
-            src={displayPost.author_id.profileImage || "https://via.placeholder.com/40"} 
-            alt="Profile" 
-            className="w-12 h-12 rounded-full object-cover"
-            onError={(e) => { e.target.src = "https://via.placeholder.com/40"; }}
-          />
+        <Link to={`/profile/${displayPost.author_id._id}`} className="shrink-0">
+          <div className="relative">
+            <img 
+              src={displayPost.author_id.profileImage || "https://via.placeholder.com/48"} 
+              alt="Profile" 
+              className="w-12 h-12 rounded-full object-cover border-2 border-white/5 shadow-xl group-hover/card:border-accent/40 transition-colors"
+              onError={(e) => { e.target.src = "https://via.placeholder.com/48"; }}
+            />
+            <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-slate-900 rounded-full"></div>
+          </div>
         </Link>
         
-        <div className="flex-1">
-          <div className="flex items-center justify-between">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
-              <Link to={`/profile/${displayPost.author_id._id}`} className="font-bold text-white hover:underline">
+              <Link to={`/profile/${displayPost.author_id._id}`} className="font-black text-white hover:text-accent transition-colors truncate max-w-[150px] sm:max-w-[250px]">
                 {displayPost.author_id.username}
               </Link>
-              <span className="text-slate-500 text-sm">
+              <span className="w-1 h-1 rounded-full bg-slate-700"></span>
+              <span className="text-slate-500 text-[11px] font-medium">
                 {formatDistanceToNow(new Date(displayPost.createdAt), { addSuffix: true })}
               </span>
             </div>
             {(isOwner || isAdmin) && !post.isRepost && (
-              <div className="flex gap-2">
+              <div className="flex gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity">
                 {isOwner && (
-                  <button onClick={() => setIsEditing(!isEditing)} className="text-slate-500 hover:text-accent">
-                    <FaEdit />
+                  <button onClick={() => setIsEditing(!isEditing)} className="p-2 text-slate-500 hover:text-accent hover:bg-accent/10 rounded-full transition-all">
+                    <FaEdit size={14} />
                   </button>
                 )}
-                <button onClick={handleDelete} className="text-slate-500 hover:text-red-500">
-                  <FaTrash />
+                <button onClick={handleDelete} className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-all">
+                  <FaTrash size={14} />
                 </button>
               </div>
             )}
           </div>
 
           {isEditing ? (
-            <div className="mt-2">
+            <div className="mt-3 animate-in fade-in slide-in-from-top-2">
               <textarea 
                 value={editContent} 
                 onChange={(e) => setEditContent(e.target.value)}
-                className="input-field mb-2"
-                rows="3"
+                className="input-field mb-3 min-h-[100px]"
               />
-              <div className="flex justify-end gap-2">
-                <button onClick={() => setIsEditing(false)} className="btn btn-secondary text-sm">Cancel</button>
-                <button onClick={handleUpdate} className="btn btn-primary text-sm">Save</button>
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setIsEditing(false)} className="text-sm font-bold text-slate-400 hover:text-white px-4">Cancel</button>
+                <button onClick={handleUpdate} className="btn btn-primary text-sm px-6">Save Changes</button>
               </div>
             </div>
           ) : (
             <>
-              <h3 className="text-lg font-bold mt-1 mb-2">{displayPost.title}</h3>
-              <p className="text-slate-300 whitespace-pre-wrap">{displayPost.content}</p>
-              {displayPost.images && displayPost.images.length > 0 ? (
-                <div className={`grid gap-1 mt-3 rounded-lg overflow-hidden ${
-                  displayPost.images.length === 1 ? 'grid-cols-1' : 
-                  'grid-cols-2'
+              {displayPost.title && (
+                <h3 className="text-lg font-black text-white mt-1 mb-2 tracking-tight leading-snug">{displayPost.title}</h3>
+              )}
+              <p className="text-slate-300 whitespace-pre-wrap text-[15px] leading-relaxed mb-4">{displayPost.content}</p>
+              
+              {(displayPost.images && displayPost.images.length > 0) || displayPost.image ? (
+                <div className={`mt-4 rounded-2xl overflow-hidden border border-white/5 shadow-2xl ${
+                  displayPost.images?.length > 1 ? 'grid grid-cols-2 gap-1.5' : ''
                 }`}>
-                  {displayPost.images.slice(0, 4).map((img, index) => (
-                    <div key={index} className={`relative cursor-pointer ${
-                      displayPost.images.length === 3 && index === 0 ? 'col-span-2' : ''
-                    } ${displayPost.images.length === 1 ? '' : 'h-48'}`}
-                    onClick={() => openLightbox(index)}
+                  {displayPost.images && displayPost.images.length > 0 ? (
+                    displayPost.images.slice(0, 4).map((img, index) => (
+                      <div 
+                        key={index} 
+                        className={`relative cursor-pointer group/img overflow-hidden ${
+                          displayPost.images.length === 3 && index === 0 ? 'col-span-2' : ''
+                        } ${displayPost.images.length === 1 ? '' : 'h-60'}`}
+                        onClick={() => openLightbox(index)}
+                      >
+                        <img 
+                          src={img} 
+                          alt={`Post content ${index}`} 
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110"
+                        />
+                        {displayPost.images.length > 4 && index === 3 && (
+                          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center text-white font-black text-2xl">
+                            +{displayPost.images.length - 4}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div 
+                      className="cursor-pointer group/img overflow-hidden"
+                      onClick={() => openLightbox(0)}
                     >
                       <img 
-                        src={img} 
-                        alt={`Post content ${index}`} 
-                        className={`w-full h-full object-cover ${displayPost.images.length === 1 ? 'max-h-[500px]' : ''}`}
+                        src={displayPost.image} 
+                        alt="Post content" 
+                        className="w-full h-auto max-h-[600px] object-cover transition-transform duration-700 group-hover/img:scale-105"
+                        onError={(e) => { e.target.style.display = 'none'; }} 
                       />
-                      {displayPost.images.length > 4 && index === 3 && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold text-xl">
-                          +{displayPost.images.length - 4}
-                        </div>
-                      )}
                     </div>
-                  ))}
+                  )}
                 </div>
-              ) : displayPost.image && (
-                <img 
-                  src={displayPost.image} 
-                  alt="Post content" 
-                  className="mt-3 rounded-lg w-full h-auto max-h-[500px] object-cover cursor-pointer"
-                  onClick={() => openLightbox(0)}
-                  onError={(e) => { e.target.style.display = 'none'; }} 
-                />
-              )}
+              ) : null}
             </>
           )}
 
-          <div className="flex items-center gap-6 mt-4 text-slate-500">
+          <div className="flex items-center gap-2 sm:gap-8 mt-6 pt-4 border-t border-white/5">
             <button 
               onClick={handleLike}
-              className={`flex items-center gap-2 hover:text-red-500 transition-colors ${liked ? 'text-red-500' : ''}`}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${liked ? 'bg-red-500/10 text-red-500' : 'hover:bg-red-500/5 text-slate-500 hover:text-red-500'}`}
             >
-              {liked ? <FaHeart /> : <FaRegHeart />}
-              <span>{likesCount}</span>
+              {liked ? <FaHeart className="animate-in zoom-in duration-300" /> : <FaRegHeart />}
+              <span className="text-sm font-black">{likesCount}</span>
             </button>
             
             <button 
               onClick={toggleComments}
-              className="flex items-center gap-2 hover:text-accent transition-colors"
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${showComments ? 'bg-accent/10 text-accent' : 'hover:bg-accent/5 text-slate-500 hover:text-accent'}`}
             >
               <FaComment />
-              <span>{commentsCount}</span> 
+              <span className="text-sm font-black">{commentsCount}</span> 
             </button>
             
             <button 
               onClick={handleRepost}
-              className={`flex items-center gap-2 hover:text-green-500 transition-colors ${reposted ? 'text-green-500' : ''}`}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${reposted ? 'bg-green-500/10 text-green-500' : 'hover:bg-green-500/5 text-slate-500 hover:text-green-500'}`}
             >
-              <FaRetweet />
-              <span>{repostsCount}</span>
+              <FaRetweet className={reposted ? 'rotate-180 transition-transform duration-500' : ''} />
+              <span className="text-sm font-black">{repostsCount}</span>
             </button>
           </div>
 
-          {/* Always show comments section if there are comments or if user wants to add one */}
-          <div className="mt-4 border-t border-slate-800 pt-4">
-            {/* Input always visible if showComments is true OR if we want to allow quick comment? 
-                User requirement: "always last 2 comment will be always visible at the the below of the image"
-                Let's keep the input hidden unless showComments is true, to save space? 
-                Or maybe just show the comments list.
-            */}
-            
+          <div className={`mt-4 space-y-4 animate-in fade-in duration-500 ${visibleComments.length > 0 ? 'pt-4 border-t border-white/5' : ''}`}>
             {showComments && (
-              <form onSubmit={handleComment} className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Write a comment..."
-                  className="flex-1 bg-slate-800 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-                />
-                <button 
-                  type="submit" 
-                  disabled={!commentText.trim()}
-                  className="text-accent font-bold disabled:opacity-50"
-                >
-                  Post
-                </button>
+              <form onSubmit={handleComment} className="flex gap-3 mb-6">
+                <img src={user?.profileImage || DEFAULT_AVATAR} className="w-8 h-8 rounded-full border border-white/10" alt="Me" />
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder="Share your thoughts..."
+                    className="w-full bg-white/5 border border-white/5 rounded-2xl px-4 py-2 text-sm focus:outline-none focus:border-accent/30 focus:ring-4 focus:ring-accent/5 transition-all outline-none"
+                  />
+                  <button 
+                    type="submit" 
+                    disabled={!commentText.trim()}
+                    className="absolute right-3 top-1.5 text-accent font-black text-[11px] uppercase tracking-wider disabled:opacity-0 transition-opacity"
+                  >
+                    Post
+                  </button>
+                </div>
               </form>
             )}
 
-            {/* Comments List */}
-            <div className="space-y-3">
+            <div className="space-y-4">
               {loadingComments ? (
-                <p className="text-center text-slate-500 text-sm">Loading comments...</p>
+                <div className="flex justify-center py-4"><span className="animate-pulse text-slate-600 font-bold uppercase tracking-tighter">Loading conversation...</span></div>
               ) : visibleComments.length > 0 ? (
                 <>
                   {visibleComments.map((comment) => (
-                    <div key={comment._id} className="flex gap-3 bg-slate-800/50 rounded-lg p-3 group">
+                    <div key={comment._id} className="flex gap-3 animate-in slide-in-from-left-2 group/comment">
                       <Link to={`/profile/${comment.author_id._id}`}>
                         <img 
                           src={comment.author_id.profileImage || DEFAULT_AVATAR} 
                           alt={comment.author_id.username}
-                          className="w-8 h-8 rounded-full object-cover"
+                          className="w-8 h-8 rounded-full object-cover border border-white/5 group-hover/comment:border-accent/30 transition-colors"
                         />
                       </Link>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Link 
-                              to={`/profile/${comment.author_id._id}`}
-                              className="font-medium text-white hover:underline text-sm"
-                            >
-                              {comment.author_id.username}
-                            </Link>
-                            <span className="text-xs text-slate-500">
-                              {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                            </span>
-                          </div>
+                      <div className="flex-1 bg-white/5 rounded-2xl p-3 relative">
+                        <div className="flex items-center justify-between mb-1">
+                          <Link to={`/profile/${comment.author_id._id}`} className="font-bold text-white hover:text-accent transition-colors text-xs">
+                            {comment.author_id.username}
+                          </Link>
                           {(user?._id === comment.author_id._id || isAdmin) && (
                             <button 
                               onClick={() => handleDeleteComment(comment._id)}
-                              className="text-slate-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="text-slate-600 hover:text-red-500 opacity-0 group-hover/comment:opacity-100 transition-opacity"
                             >
-                              <FaTrash size={12} />
+                              <FaTrash size={10} />
                             </button>
                           )}
                         </div>
-                        <p className="text-slate-300 text-sm mt-1">{comment.content}</p>
+                        <p className="text-slate-300 text-sm leading-relaxed">{comment.content}</p>
+                        <span className="absolute -bottom-4 right-2 text-[9px] font-bold text-slate-600 uppercase tracking-tighter">
+                          {formatDistanceToNow(new Date(comment.createdAt))} ago
+                        </span>
                       </div>
                     </div>
                   ))}
-                  {!showComments && commentsCount > 2 && (
+                  {!showComments && commentsCount > (post.lastComments?.length || 0) && (
                     <button 
                       onClick={toggleComments}
-                      className="text-sm text-slate-500 hover:text-accent w-full text-left pl-2"
+                      className="text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-accent transition-colors w-full py-2"
                     >
-                      View all {commentsCount} comments
+                      Show all conversation
                     </button>
                   )}
                 </>
               ) : showComments ? (
-                <p className="text-center text-slate-500 text-sm">No comments yet. Be the first to comment!</p>
+                <div className="text-center py-6">
+                  <p className="text-slate-600 text-sm italic font-medium">Be the first to share a thought.</p>
+                </div>
               ) : null}
             </div>
           </div>
@@ -357,7 +357,7 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
           onClose={() => setLightboxOpen(false)}
         />
       )}
-    </div>
+    </article>
   );
 };
 

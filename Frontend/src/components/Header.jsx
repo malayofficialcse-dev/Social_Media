@@ -11,6 +11,7 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const searchUsers = async () => {
@@ -30,31 +31,33 @@ const Header = () => {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
   return (
-    <header className="sticky top-0 z-50 bg-surface/80 backdrop-blur-md border-b border-slate-800 px-4 md:px-6 py-3">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-50 glass border-b border-white/5 py-2 px-4 md:px-6">
+      <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          {/* Hamburger Button (Mobile) */}
           <button 
-            className="md:hidden text-slate-300 hover:text-white"
+            className="md:hidden text-slate-300 hover:text-white p-2 hover:bg-white/5 rounded-lg transition-all"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            <FaBars size={24} />
+            <FaBars size={20} />
           </button>
-          <Link to="/" className="text-xl md:text-2xl font-bold text-accent shrink-0">P Connect</Link>
+          <Link to="/" className="flex items-center gap-2 group">
+            <div className="w-9 h-9 bg-accent rounded-xl flex items-center justify-center shadow-lg shadow-accent/20 group-hover:scale-110 transition-transform">
+              <span className="text-white font-black text-xl">P</span>
+            </div>
+            <span className="text-xl font-black gradient-text tracking-tighter hidden sm:block">Connect</span>
+          </Link>
         </div>
         
-        {/* Search Bar (Desktop) */}
-        <div className="relative flex-1 max-w-md hidden md:block">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <FaSearch className="text-slate-400" />
+        {/* Search Bar */}
+        <div className="relative flex-1 max-w-lg hidden md:block">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <FaSearch className="text-slate-500 w-4 h-4" />
           </div>
           <input
             type="text"
-            className="block w-full pl-10 pr-3 py-2 border border-slate-700 rounded-md leading-5 bg-slate-800 text-slate-300 placeholder-slate-400 focus:outline-none focus:bg-slate-900 focus:border-accent sm:text-sm transition duration-150 ease-in-out"
-            placeholder="Search users..."
+            className="block w-full pl-11 pr-4 py-2 bg-white/5 border border-white/5 rounded-2xl text-slate-200 placeholder-slate-500 focus:outline-none focus:bg-white/10 focus:border-accent/30 focus:ring-4 focus:ring-accent/5 transition-all text-sm"
+            placeholder="Explore users..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -64,14 +67,13 @@ const Header = () => {
             onFocus={() => setShowResults(true)}
           />
           
-          {/* Search Results Dropdown */}
           {showResults && searchResults.length > 0 && (
-            <div className="absolute mt-1 w-full bg-slate-800 border border-slate-700 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+            <div className="absolute mt-2 w-full glass border border-white/10 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto p-2 animate-in fade-in zoom-in-95 duration-200">
               {searchResults.map((result) => (
                 <Link 
                   key={result._id} 
                   to={`/profile/${result._id}`}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-slate-700 transition-colors"
+                  className="flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl transition-all"
                   onClick={() => {
                     setSearchQuery('');
                     setShowResults(false);
@@ -80,11 +82,11 @@ const Header = () => {
                   <img 
                     src={result.profileImage || "https://via.placeholder.com/40"} 
                     alt={result.username} 
-                    className="w-8 h-8 rounded-full object-cover"
+                    className="w-9 h-9 rounded-full object-cover border border-white/10"
                   />
                   <div>
-                    <p className="text-sm font-medium text-white">{result.username}</p>
-                    <p className="text-xs text-slate-400 truncate">{result.bio || "No bio available"}</p>
+                    <p className="text-sm font-semibold text-white leading-tight">{result.username}</p>
+                    <p className="text-[11px] text-slate-400 truncate max-w-[200px]">{result.bio || "Active member"}</p>
                   </div>
                 </Link>
               ))}
@@ -93,145 +95,82 @@ const Header = () => {
         </div>
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-6">
-          <Link to="/" className="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-colors">
-            <FaHome size={20} />
-            <span className="text-xs">Home</span>
+        <nav className="hidden lg:flex items-center gap-2">
+          <Link to="/" title="Home" className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+            <FaHome size={22} />
           </Link>
-          <Link to="/notifications" className="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-colors relative">
-            <div className="relative">
-              <FaBell size={20} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </div>
-            <span className="text-xs">Notifications</span>
+          <Link to="/notifications" title="Notifications" className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all relative">
+            <FaBell size={21} />
+            {unreadCount > 0 && (
+              <span className="absolute top-2 right-2 bg-red-500 text-white text-[9px] font-black rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border-2 border-slate-900">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </Link>
-          <Link to="/chat" className="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-colors">
+          <Link to="/chat" title="Messages" className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
             <FaPaperPlane size={20} />
-            <span className="text-xs">Messages</span>
           </Link>
-          <Link to="/about" className="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-colors">
-            <FaInfoCircle size={20} />
-            <span className="text-xs">About</span>
-          </Link>
-          <Link to="/contact" className="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-colors">
-            <FaEnvelope size={20} />
-            <span className="text-xs">Contact</span>
+          <Link to="/about" title="About" className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+            <FaInfoCircle size={21} />
           </Link>
           {user?.role === 'admin' && (
-            <Link to="/admin" className="flex flex-col items-center gap-1 text-slate-400 hover:text-accent transition-colors">
+            <Link to="/admin" title="Admin" className="p-2.5 rounded-xl text-slate-400 hover:text-accent hover:bg-accent/5 transition-all">
               <FaUser size={20} />
-              <span className="text-xs">Admin</span>
             </Link>
           )}
         </nav>
 
-        <div className="flex items-center gap-4">
+        {/* User Profile / Auth */}
+        <div className="flex items-center gap-2 md:gap-4 ml-2">
           {user ? (
             <>
-              <Link to={`/profile/${user._id}`} className="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-colors">
+              <div className="h-8 w-[1px] bg-white/10 mx-1 hidden md:block"></div>
+              <Link to={`/profile/${user._id}`} className="flex items-center gap-3 p-1.5 pl-1.5 pr-4 rounded-full hover:bg-white/5 transition-all border border-transparent hover:border-white/5">
                 <img 
                   src={user.profileImage || "https://via.placeholder.com/32"} 
                   alt="Profile" 
-                  className="w-6 h-6 rounded-full object-cover border border-slate-600"
+                  className="w-8 h-8 rounded-full object-cover border-2 border-white/10 shadow-sm"
                 />
-                <span className="text-xs hidden sm:block">Me</span>
+                <span className="text-sm font-semibold text-slate-200 hidden xl:block">{user.username?.split(' ')[0]}</span>
               </Link>
               <button 
                 onClick={logout}
-                className="flex flex-col items-center gap-1 text-slate-400 hover:text-red-400 transition-colors"
+                className="p-2.5 rounded-xl text-slate-500 hover:text-red-400 hover:bg-red-400/5 transition-all"
                 title="Logout"
               >
-                <FaSignOutAlt size={20} />
-                <span className="text-xs hidden sm:block">Logout</span>
+                <FaSignOutAlt size={18} />
               </button>
             </>
           ) : (
-            <div className="flex gap-4">
-              <Link to="/login" className="text-slate-300 hover:text-white font-medium">Login</Link>
-              <Link to="/register" className="btn btn-primary py-1.5 px-4 text-sm">Sign Up</Link>
+            <div className="flex items-center gap-3">
+              <Link to="/login" className="text-slate-400 hover:text-white text-sm font-semibold px-4 py-2 transition-all">Login</Link>
+              <Link to="/register" className="btn btn-primary text-sm px-6 py-2">Join Now</Link>
             </div>
           )}
         </div>
       </div>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 w-full bg-surface border-b border-slate-800 p-4 shadow-xl">
-          <div className="flex flex-col gap-4">
-            {/* Mobile Search */}
-            <div className="relative">
-              <FaSearch className="absolute left-3 top-3 text-slate-400" />
-              <input
-                type="text"
-                className="block w-full pl-10 pr-3 py-2 border border-slate-700 rounded-md bg-slate-800 text-slate-300 placeholder-slate-400 focus:outline-none focus:border-accent"
-                placeholder="Search users..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setShowResults(true);
-                }}
-              />
-               {/* Mobile Search Results */}
-              {showResults && searchResults.length > 0 && (
-                <div className="absolute mt-1 w-full bg-slate-800 border border-slate-700 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
-                  {searchResults.map((result) => (
-                    <Link 
-                      key={result._id} 
-                      to={`/profile/${result._id}`}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-slate-700 transition-colors"
-                      onClick={() => {
-                        setSearchQuery('');
-                        setShowResults(false);
-                        setIsMenuOpen(false);
-                      }}
-                    >
-                      <img 
-                        src={result.profileImage || "https://via.placeholder.com/40"} 
-                        alt={result.username} 
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                      <div>
-                        <p className="text-sm font-medium text-white">{result.username}</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <nav className="flex flex-col gap-2">
-              <Link to="/" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 text-slate-300" onClick={() => setIsMenuOpen(false)}>
-                <FaHome /> Home
+        <div className="md:hidden absolute top-full left-0 w-full glass border-b border-white/10 p-4 shadow-2xl animate-in slide-in-from-top-4 duration-300">
+           {/* ... mobile menu content ... */}
+           <div className="flex flex-col gap-2">
+              <Link to="/" className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 text-slate-200" onClick={() => setIsMenuOpen(false)}>
+                <FaHome className="text-accent" /> <span className="font-semibold">Home</span>
               </Link>
-              <Link to="/notifications" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 text-slate-300" onClick={() => setIsMenuOpen(false)}>
-                <div className="relative">
-                  <FaBell />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-3 w-3 flex items-center justify-center"></span>
-                  )}
-                </div>
-                Notifications
+              <Link to="/notifications" className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 text-slate-200" onClick={() => setIsMenuOpen(false)}>
+                <FaBell className="text-accent" /> <span className="font-semibold">Notifications</span>
               </Link>
-              <Link to="/chat" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 text-slate-300" onClick={() => setIsMenuOpen(false)}>
-                <FaPaperPlane /> Messages
+              <Link to="/chat" className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 text-slate-200" onClick={() => setIsMenuOpen(false)}>
+                <FaPaperPlane className="text-accent" /> <span className="font-semibold">Messages</span>
               </Link>
-              <Link to="/about" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 text-slate-300" onClick={() => setIsMenuOpen(false)}>
-                <FaInfoCircle /> About Us
-              </Link>
-              <Link to="/contact" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 text-slate-300" onClick={() => setIsMenuOpen(false)}>
-                <FaEnvelope /> Contact Us
-              </Link>
-              {user?.role === 'admin' && (
-                <Link to="/admin" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 text-accent" onClick={() => setIsMenuOpen(false)}>
-                  <FaUser /> Admin Panel
-                </Link>
-              )}
-            </nav>
-          </div>
+              <button 
+                onClick={() => { logout(); setIsMenuOpen(false); }}
+                className="flex items-center gap-4 p-3 rounded-xl hover:bg-red-400/5 text-red-400 transition-all font-semibold"
+              >
+                <FaSignOutAlt /> Sign Out
+              </button>
+           </div>
         </div>
       )}
     </header>

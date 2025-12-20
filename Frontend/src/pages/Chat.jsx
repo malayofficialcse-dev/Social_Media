@@ -11,7 +11,8 @@ import EmojiPicker from 'emoji-picker-react';
 import AudioPlayer from '../components/AudioPlayer';
 import CreateGroupModal from '../components/CreateGroupModal';
 import GroupInfoModal from '../components/GroupInfoModal';
-import { FaPaperPlane, FaUserCircle, FaImage, FaTimes, FaArrowLeft, FaSmile, FaCheck, FaCheckDouble, FaMicrophone, FaStop, FaTrash, FaArrowRight, FaUsers, FaPlus, FaInfoCircle } from 'react-icons/fa';
+import VideoCallModal from '../components/VideoCallModal';
+import { FaPaperPlane, FaUserCircle, FaImage, FaTimes, FaArrowLeft, FaSmile, FaCheck, FaCheckDouble, FaMicrophone, FaStop, FaTrash, FaArrowRight, FaUsers, FaPlus, FaInfoCircle, FaVideo, FaPhoneAlt } from 'react-icons/fa';
 
 const Chat = () => {
   const { user } = useAuth();
@@ -19,6 +20,11 @@ const Chat = () => {
   const [chatList, setChatList] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [messages, setMessages] = useState([]);
+  
+  // Call State
+  const [callSession, setCallSession] = useState(null); // { partner, type: 'incoming'|'outgoing', signal }
+  const [incomingCall, setIncomingCall] = useState(null); // { from, name, signal }
+  
   const [newMessage, setNewMessage] = useState('');
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -204,6 +210,21 @@ const Chat = () => {
           msg._id === messageId ? { ...msg, deletedForEveryone, content, image: "", audio: "" } : msg
         ));
       });
+
+      // Call Listeners
+      socket.on('incoming-call', ({ from, name, signal }) => {
+        setIncomingCall({ from, name, signal });
+      });
+
+      socket.on('call-ended', () => {
+        setCallSession(null);
+        setIncomingCall(null);
+      });
+
+      socket.on('call-rejected', () => {
+        setCallSession(null);
+        toast.info("Call was rejected");
+      });
     }
 
     return () => {
@@ -215,6 +236,9 @@ const Chat = () => {
         socket.off('stop typing');
         socket.off('message reaction');
         socket.off('message deleted');
+        socket.off('incoming-call');
+        socket.off('call-ended');
+        socket.off('call-rejected');
       }
     };
   }, [socket, selectedChat, fetchChatList, markMessagesAsRead]);
@@ -445,6 +469,30 @@ const Chat = () => {
     }
   };
 
+  const handleStartCall = () => {
+    if (!selectedChat || selectedChat.isGroup) return;
+    setCallSession({ partner: selectedChat, type: 'outgoing' });
+  };
+
+  const handleAcceptCall = () => {
+    const partner = chatList.find(c => c._id === incomingCall.from);
+    setCallSession({ 
+      partner: partner || { _id: incomingCall.from, username: incomingCall.name }, 
+      type: 'incoming', 
+      signal: incomingCall.signal 
+    });
+    setIncomingCall(null);
+  };
+
+  const handleRejectCall = () => {
+    socket.emit('reject-call', { to: incomingCall.from });
+    setIncomingCall(null);
+  };
+
+  const isMutual = selectedChat && !selectedChat.isGroup && 
+    user.followers?.some(f => (f._id || f) === selectedChat._id) && 
+    user.following?.some(f => (f._id || f) === selectedChat._id);
+
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
     if (!socket) return;
@@ -659,20 +707,39 @@ const Chat = () => {
                         {selectedChat.username}
                         {selectedChat.isGroup && <span className="text-xs bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">Group</span>}
                     </p>
-                    {typing && <p className="text-xs text-accent">typing...</p>}
-                    {selectedChat.isGroup && !typing && (
-                        <p className="text-xs text-slate-400">
-                            {selectedChat.members?.length || 0} members
-                        </p>
+                    {typing ? (
+                      <p className="text-[10px] text-accent font-medium animate-pulse">typing...</p>
+                    ) : (
+                      <p className="text-[10px] text-slate-400 font-medium">
+                        {selectedChat.isGroup 
+                          ? `${selectedChat.members?.length || 0} members` 
+                          : isUserOnline(selectedChat._id) 
+                            ? <span className="text-green-500">Online</span> 
+                            : selectedChat.lastSeen 
+                              ? `Last seen ${formatDistanceToNow(new Date(selectedChat.lastSeen), { addSuffix: true })}` 
+                              : 'Offline'
+                        }
+                      </p>
                     )}
                 </div>
               </div>
               
-              {selectedChat.isGroup && (
-                  <button onClick={() => setShowGroupInfo(true)} className="text-slate-400 hover:text-white p-2">
-                      <FaInfoCircle size={20} />
+              <div className="flex items-center gap-2">
+                {isMutual && (
+                  <button 
+                    onClick={handleStartCall}
+                    className="text-slate-400 hover:text-accent p-2 transition-colors"
+                    title="Video Call"
+                  >
+                    <FaVideo size={20} />
                   </button>
-              )}
+                )}
+                {selectedChat.isGroup && (
+                    <button onClick={() => setShowGroupInfo(true)} className="text-slate-400 hover:text-white p-2">
+                        <FaInfoCircle size={20} />
+                    </button>
+                )}
+              </div>
             </div>
 
             {/* Messages */}
@@ -962,6 +1029,50 @@ const Chat = () => {
                 Cancel
               </button>
            </div>
+        </div>
+      )}
+
+      {/* Video Call Modal */}
+      {callSession && (
+        <VideoCallModal 
+          partner={callSession.partner} 
+          callType={callSession.type} 
+          incomingSignal={callSession.signal}
+          onHangup={() => setCallSession(null)} 
+        />
+      )}
+
+      {/* Incoming Call Popup */}
+      {incomingCall && !callSession && (
+        <div className="fixed top-4 right-4 z-[110] glass p-4 rounded-2xl border border-white/10 shadow-2xl animate-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-accent">
+                <img src={`https://ui-avatars.com/api/?name=${incomingCall.name}&background=random`} alt={incomingCall.name} />
+              </div>
+              <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1 animate-pulse">
+                <FaPhoneAlt size={10} className="text-white" />
+              </div>
+            </div>
+            <div>
+              <p className="text-white font-bold leading-none">{incomingCall.name}</p>
+              <p className="text-slate-400 text-xs mt-1 font-medium">Incoming Video Call...</p>
+            </div>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button 
+              onClick={handleRejectCall}
+              className="flex-1 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white text-xs font-bold py-2 rounded-xl transition-all"
+            >
+              Decline
+            </button>
+            <button 
+              onClick={handleAcceptCall}
+              className="flex-1 bg-green-500 text-white text-xs font-bold py-2 rounded-xl hover:bg-green-600 transition-all shadow-lg shadow-green-500/20"
+            >
+              Accept
+            </button>
+          </div>
         </div>
       )}
     </div>

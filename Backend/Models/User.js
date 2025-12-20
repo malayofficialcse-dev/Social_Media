@@ -10,7 +10,8 @@ const userSchema = new mongoose.Schema(
     backgroundImage: { type: String, default: "" },
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    role: { type: String, enum: ["user", "admin"], default: "user" }
+    role: { type: String, enum: ["user", "admin"], default: "user" },
+    lastSeen: { type: Date, default: Date.now }
   },
   { timestamps: true }
 );

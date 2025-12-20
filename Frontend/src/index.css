@@ -1,17 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #0f172a;
-  --color-secondary: #1e293b;
-  --color-accent: #06b6d4;
-  --color-accent-hover: #0891b2;
+  --color-primary: #020617;
+  --color-secondary: #0f172a;
+  --color-accent: #0ea5e9;
+  --color-accent-hover: #0284c7;
   --color-dark: #020617;
-  --color-surface: #1e293b;
+  --color-surface: #0f172a;
+  --color-card: #1e293b;
 
-  --font-sans: Inter, system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 
   --animate-fade-in: fadeIn 0.5s ease-out;
   --animate-slide-up: slideUp 0.5s ease-out;
+  --animate-in: animateIn 0.3s ease-out;
 
   @keyframes fadeIn {
     0% { opacity: 0; }
@@ -21,57 +23,93 @@
     0% { transform: translateY(20px); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }
   }
+  @keyframes animateIn {
+    0% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
+  }
 }
 
 @layer base {
   body {
-    @apply bg-dark text-slate-200 font-sans antialiased;
+    @apply bg-[#020617] text-slate-200 font-sans antialiased selection:bg-accent/30 selection:text-white;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply font-bold text-white;
+    @apply font-semibold text-white tracking-tight;
   }
 }
 
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer;
+    @apply px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-95;
   }
   
   .btn-primary {
-    @apply bg-accent text-white hover:bg-accent-hover shadow-lg shadow-accent/20;
+    @apply bg-accent text-white hover:bg-accent-hover shadow-lg shadow-accent/20 hover:shadow-accent/40;
   }
   
   .btn-secondary {
-    @apply bg-secondary text-slate-200 hover:bg-slate-700;
+    @apply bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700;
   }
   
   .btn-outline {
-    @apply border border-slate-600 text-slate-300 hover:border-accent hover:text-accent;
+    @apply border border-slate-700 text-slate-300 hover:border-accent hover:text-accent hover:bg-accent/5;
   }
 
-  .input-field {
-    @apply w-full bg-secondary border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors;
+  .glass {
+    @apply bg-slate-900/40 backdrop-blur-xl border border-white/5 shadow-2xl;
   }
 
   .card {
-    @apply bg-surface rounded-xl border border-slate-800 p-6 shadow-xl;
+    @apply bg-[#0f172a] rounded-2xl border border-slate-800/50 p-6 shadow-xl transition-all duration-300 hover:border-slate-700/80;
+  }
+
+  .input-field {
+    @apply w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/10 transition-all;
+  }
+
+  .nav-link {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all duration-200;
+  }
+
+  .nav-link-active {
+    @apply bg-accent/10 text-accent font-medium;
   }
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-dark;
+  @apply bg-transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-700 rounded-full;
+  @apply bg-slate-700/50 rounded-full hover:bg-slate-600 transition-colors;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-600;
+/* Premium Gradients */
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400 font-bold;
 }
+
+.gradient-border {
+  position: relative;
+  border-radius: 1rem;
+}
+
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 1.1rem;
+  padding: 1px;
+  background: linear-gradient(45deg, #0ea5e9, #22d3ee, #0ea5e9);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.3;
+}
+

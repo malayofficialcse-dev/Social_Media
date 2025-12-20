@@ -10,6 +10,7 @@ const CreatePost = ({ onPostCreated }) => {
   const [content, setContent] = useState('');
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const { user } = useAuth();
 
   // Cropper state
@@ -22,7 +23,7 @@ const CreatePost = ({ onPostCreated }) => {
 
     setLoading(true);
     const formData = new FormData();
-    formData.append('title', title);
+    formData.append('title', title || 'Untitled Post');
     formData.append('content', content);
     images.forEach((image) => {
       formData.append('images', image);
@@ -36,7 +37,8 @@ const CreatePost = ({ onPostCreated }) => {
       setTitle('');
       setContent('');
       setImages([]);
-      toast.success("Post created successfully!");
+      setIsExpanded(false);
+      toast.success("Post shared!");
     } catch (error) {
       const message = error.response?.data?.message || error.response?.data?.errors?.join(', ') || "Error creating post";
       toast.error(message);
@@ -49,6 +51,7 @@ const CreatePost = ({ onPostCreated }) => {
     if (e.target.files && e.target.files.length > 0) {
       const newImages = Array.from(e.target.files);
       setImages((prev) => [...prev, ...newImages]);
+      setIsExpanded(true);
     }
   };
 
@@ -63,99 +66,124 @@ const CreatePost = ({ onPostCreated }) => {
   };
 
   const handleCropComplete = (croppedBlob) => {
-    // Create a new File object from the blob
     const originalFile = images[editingImageIndex];
     const croppedFile = new File([croppedBlob], originalFile.name, {
       type: originalFile.type,
       lastModified: Date.now(),
     });
 
-    // Replace the image in the array
     const newImages = [...images];
     newImages[editingImageIndex] = croppedFile;
     setImages(newImages);
-
-    // Close cropper
     setEditingImageIndex(null);
     setImageToCrop(null);
   };
 
   return (
-    <div className="card mb-6">
+    <div className={`card mb-6 transition-all duration-500 overflow-hidden ${isExpanded ? 'ring-1 ring-accent/30' : ''}`}>
       <div className="flex gap-4">
         <img 
           src={user?.profileImage || "https://via.placeholder.com/40"} 
           alt="Profile" 
-          className="w-12 h-12 rounded-full object-cover"
+          className="w-11 h-11 rounded-full object-cover border-2 border-slate-800 shadow-inner shrink-0"
           onError={(e) => { e.target.src = "https://via.placeholder.com/40"; }}
         />
-        <form onSubmit={handleSubmit} className="flex-1">
-          <input
-            type="text"
-            placeholder="Post Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-transparent text-white border-b border-slate-700 p-2 mb-2 focus:outline-none focus:border-accent"
-          />
-          <textarea
-            placeholder="What's happening?"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="w-full bg-transparent text-white text-lg resize-none focus:outline-none min-h-[100px]"
-          />
-          
-          {images.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              {images.map((img, index) => (
-                <div key={index} className="relative group">
-                  <img 
-                    src={URL.createObjectURL(img)} 
-                    alt={`Preview ${index}`} 
-                    className="w-full h-40 object-cover rounded-lg"
-                  />
-                  <div className="absolute top-2 right-2 flex gap-2">
-                    <button 
-                      type="button" 
-                      onClick={() => startEditing(index)}
-                      className="bg-black/50 text-white rounded-full p-1.5 hover:bg-blue-500 transition-colors"
-                      title="Edit Image"
-                    >
-                      <FaCrop size={12} />
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={() => removeImage(index)}
-                      className="bg-black/50 text-white rounded-full p-1.5 hover:bg-red-500 transition-colors"
-                      title="Remove Image"
-                    >
-                      <FaTimes size={12} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex justify-between items-center mt-2 border-t border-slate-800 pt-3">
-            <label className="cursor-pointer text-accent hover:text-accent-hover p-2 rounded-full hover:bg-accent/10 transition-colors">
-              <FaImage size={20} />
-              <input 
-                type="file" 
-                accept="image/*" 
-                multiple
-                onChange={handleFileChange} 
-                className="hidden" 
-              />
-            </label>
-            <button 
-              type="submit" 
-              disabled={loading || (!content.trim() && images.length === 0)}
-              className="btn btn-primary rounded-full px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+        <div className="flex-1">
+          {!isExpanded ? (
+            <div 
+              onClick={() => setIsExpanded(true)}
+              className="bg-slate-800/50 hover:bg-slate-800 text-slate-400 px-5 py-2.5 rounded-full cursor-pointer transition-all border border-slate-700/50 flex items-center"
             >
-              {loading ? 'Posting...' : 'Post'}
-            </button>
-          </div>
-        </form>
+              What's on your mind, {user?.username?.split(' ')[0]}?
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="animate-in fade-in slide-in-from-top-2 duration-300">
+              <input
+                type="text"
+                placeholder="Post Title (Optional)"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full bg-transparent text-white border-b border-slate-800 p-2 mb-3 focus:outline-none focus:border-accent transition-colors"
+                autoFocus
+              />
+              <textarea
+                placeholder="Share your thoughts..."
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="w-full bg-transparent text-white text-lg resize-none focus:outline-none min-h-[120px]"
+              />
+              
+              {images.length > 0 && (
+                <div className="grid grid-cols-2 gap-2 mt-4 pb-4">
+                  {images.map((img, index) => (
+                    <div key={index} className="relative group rounded-xl overflow-hidden border border-slate-800">
+                      <img 
+                        src={URL.createObjectURL(img)} 
+                        alt={`Preview ${index}`} 
+                        className="w-full h-40 object-cover"
+                      />
+                      <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          type="button" 
+                          onClick={() => startEditing(index)}
+                          className="bg-black/60 backdrop-blur-md text-white rounded-full p-2 hover:bg-accent transition-colors"
+                          title="Edit Image"
+                        >
+                          <FaCrop size={14} />
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => removeImage(index)}
+                          className="bg-black/60 backdrop-blur-md text-white rounded-full p-2 hover:bg-red-500 transition-colors"
+                          title="Remove Image"
+                        >
+                          <FaTimes size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex justify-between items-center mt-2 border-t border-slate-800 pt-4">
+                <div className="flex gap-2">
+                  <label className="cursor-pointer text-slate-400 hover:text-accent p-2 rounded-full hover:bg-accent/10 transition-all flex items-center gap-2 text-sm font-medium">
+                    <FaImage size={20} />
+                    <span className="hidden sm:inline">Photo</span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      multiple
+                      onChange={handleFileChange} 
+                      className="hidden" 
+                    />
+                  </label>
+                </div>
+                <div className="flex gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setIsExpanded(false);
+                      setImages([]);
+                      setContent('');
+                      setTitle('');
+                    }}
+                    className="text-slate-400 hover:text-white px-4 text-sm font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={loading || (!content.trim() && images.length === 0)}
+                    className="btn btn-primary px-8 shadow-accent/20"
+                  >
+                    {loading ? 'Posting...' : 'Post'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
 
       {imageToCrop && (
