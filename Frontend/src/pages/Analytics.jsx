@@ -12,6 +12,14 @@ import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import PostCard from '../components/PostCard';
 import VerifiedBadge from '../components/VerifiedBadge';
+import { 
+  ComposableMap, 
+  Geographies, 
+  Geography, 
+  Marker 
+} from "react-simple-maps";
+
+const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
 const Analytics = () => {
   const [stats, setStats] = useState(null);
@@ -195,22 +203,39 @@ const Analytics = () => {
               <FaGlobe className="text-accent" /> Network Footprint
             </h2>
             
-            <div className="h-64 flex items-center justify-center border-2 border-dashed border-border-main/50 rounded-[2rem] bg-bg-main/20">
-               <div className="text-center">
-                  <div className="relative inline-block mb-4">
-                     <FaGlobe className="text-accent/20 animate-pulse" size={80} />
-                     <div className="absolute inset-0 flex items-center justify-center">
-                        <FaCompass className="text-accent" size={30} />
-                     </div>
-                  </div>
-                  <p className="text-xs font-black text-text-muted uppercase tracking-[0.3em]">Mapping Connections...</p>
-                  <div className="flex justify-center gap-2 mt-4">
-                    {stats.locations.slice(0, 3).map((l, i) => (
-                      <div key={i} className="px-3 py-1 bg-surface/80 border border-border-main rounded-full text-[10px] font-black text-accent drop-shadow-lg">
-                        {l.country}
-                      </div>
-                    ))}
-                  </div>
+            <div className="h-80 flex items-center justify-center border border-border-main/30 rounded-[2rem] bg-bg-main/20 overflow-hidden relative group/map">
+               <ComposableMap projectionConfig={{ scale: 145 }}>
+                 <Geographies geography={geoUrl}>
+                   {({ geographies }) =>
+                     geographies.map((geo) => (
+                       <Geography
+                         key={geo.rsmKey}
+                         geography={geo}
+                         fill="var(--bg-main)"
+                         stroke="var(--border-main)"
+                         strokeWidth={0.5}
+                         style={{
+                           default: { outline: "none" },
+                           hover: { fill: "var(--accent)", fillOpacity: 0.1, outline: "none" },
+                           pressed: { outline: "none" },
+                         }}
+                       />
+                     ))
+                   }
+                 </Geographies>
+                 {stats.locations.map((loc, i) => (
+                   <Marker key={i} coordinates={[loc.lng || 0, loc.lat || 0]}>
+                     <g className="cursor-pointer group/marker">
+                       <circle r={8} fill="var(--accent)" fillOpacity={0.2} className="animate-ping" />
+                       <circle r={4} fill="var(--accent)" stroke="#fff" strokeWidth={1} />
+                       <title>{`${loc.country || 'Unknown'}: ${loc.count} Interactions`}</title>
+                     </g>
+                   </Marker>
+                 ))}
+               </ComposableMap>
+               <div className="absolute bottom-4 left-4 flex items-center gap-2">
+                 <div className="w-2 h-2 bg-accent rounded-full animate-pulse shadow-[0_0_8px_var(--accent)]"></div>
+                 <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Live Pulse Sensors Active</span>
                </div>
             </div>
             
