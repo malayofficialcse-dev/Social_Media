@@ -2,6 +2,7 @@ import User from "../Models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Notification from "../Models/Notification.js";
+import { sendWelcomeEmail, sendLoginNotificationEmail } from "../utils/emailService.js";
 
 // Generate Token
 const generateToken = (id) => {
@@ -28,6 +29,9 @@ export const registerUser = async (req, res) => {
       email,
       password: hashedPassword,
     });
+
+    // Send welcome email
+    sendWelcomeEmail(user.email, user.username);
 
     return res.status(201).json({
       message: "User registered successfully",
@@ -58,6 +62,9 @@ export const loginUser = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
       return res.status(400).json({ message: "Invalid email or password" });
+
+    // Send login notification email
+    sendLoginNotificationEmail(user.email, user.username);
 
     res.json({
       message: "Login successful",
