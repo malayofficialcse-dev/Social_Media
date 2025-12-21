@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ["user", "admin"], default: "user" },
     isPro: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
+    isGhostMode: { type: Boolean, default: false },
     profileTheme: {
       accentColor: { type: String, default: "" }, // e.g., 'gold', 'emerald', 'rose'
       applied: { type: Boolean, default: false }

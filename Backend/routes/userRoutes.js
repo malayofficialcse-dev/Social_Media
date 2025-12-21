@@ -14,6 +14,7 @@ import {
   updateProfileTheme,
   logProfileVisit,
   getUserAnalytics,
+  toggleGhostMode,
   seedSampleAnalytics,
 } from "../controllers/userController.js";
 import { protect } from "../middleware/authMiddleware.js";
@@ -33,6 +34,7 @@ router.get("/search", protect, searchUsers);
 router.get("/suggestions", protect, getAllUsers);
 router.put("/upgrade-pro", protect, upgradeToPro);
 router.put("/profile-theme", protect, updateProfileTheme);
+router.put("/ghost-mode", protect, toggleGhostMode);
 router.get("/analytics", protect, getUserAnalytics);
 router.post("/seed-analytics", protect, seedSampleAnalytics);
 router.post("/:id/visit", protect, logProfileVisit);

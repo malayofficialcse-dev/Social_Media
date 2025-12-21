@@ -1,15 +1,16 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { FaChartLine,FaUser, FaSignOutAlt, FaHome, FaInfoCircle, FaSearch, FaBars, FaBell, FaPaperPlane, FaSun, FaMoon, FaUsers, FaTimes, FaShieldAlt } from 'react-icons/fa';
+import { FaChartLine,FaUser, FaSignOutAlt, FaHome, FaInfoCircle, FaSearch, FaBars, FaBell, FaPaperPlane, FaSun, FaMoon, FaUsers, FaTimes, FaShieldAlt, FaGhost, FaEyeSlash } from 'react-icons/fa';
 import VerifiedBadge from './VerifiedBadge';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
+import { toast } from 'react-toastify';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import Logo from './Logo';
 
 const Header = () => {
-  const { user, logout } = useAuth();
+  const { user, setUser, logout } = useAuth();
   const { unreadCount } = useNotifications();
   const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,6 +18,24 @@ const Header = () => {
   const [showResults, setShowResults] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const [ghostMode, setGhostMode] = useState(user?.isGhostMode || false);
+
+  const toggleGhostMode = async () => {
+    if (!user?.isPro) {
+      toast.info("Elite Ghost Mode requires Pro membership");
+      return;
+    }
+    try {
+      const { data } = await api.put('/users/ghost-mode');
+      if (data.success) {
+        setGhostMode(data.isGhostMode);
+        toast.success(data.isGhostMode ? "Ghost Mode: Active (Invisible)" : "Ghost Mode: Disabled (Visible)");
+        setUser({ ...user, isGhostMode: data.isGhostMode });
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to toggle Ghost Mode");
+    }
+  };
 
   useEffect(() => {
     const searchUsers = async () => {
@@ -165,6 +184,17 @@ const Header = () => {
                   <span className="text-[9px] font-black uppercase tracking-widest text-text-muted/60">Professional</span>
                 </div>
               </Link>
+              
+              {user.isPro && (
+                <button 
+                  onClick={toggleGhostMode}
+                  className={`w-10 h-10 rounded-xl transition-all flex items-center justify-center border-l border-border-main/10 group ${ghostMode ? 'bg-purple-500/10 text-purple-500' : 'text-text-muted hover:text-accent hover:bg-accent/5'}`}
+                  title={ghostMode ? "Ghost Mode Active (Invisible)" : "Activate Ghost Mode"}
+                >
+                   {ghostMode ? <FaEyeSlash size={16} className="animate-pulse" /> : <FaGhost size={16} />}
+                </button>
+              )}
+
               <button 
                 onClick={logout}
                 className="w-7 h-7 md:w-10 md:h-10 rounded-xl text-text-muted hover:text-red-500 hover:bg-red-500/5 transition-all flex items-center justify-center border-l border-border-main/10"
@@ -255,9 +285,22 @@ const Header = () => {
                 </button>
               )}
 
-              <div className="h-[1px] bg-border-main/50 my-2"></div>
+               <div className="h-[1px] bg-border-main/50 my-2"></div>
 
-              <button 
+               {user?.isPro && (
+                <button 
+                  onClick={toggleGhostMode}
+                  className={`flex items-center justify-between p-5 rounded-2xl border transition-all font-bold ${ghostMode ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : 'bg-surface/40 border-border-main text-text-main'}`}
+                >
+                  <div className="flex items-center gap-4">
+                    {ghostMode ? <FaEyeSlash size={18} /> : <FaGhost size={18} />}
+                    <span>{ghostMode ? 'Ghost Mode: Active' : 'Ghost Mode: Hidden'}</span>
+                  </div>
+                  <div className={`w-3 h-3 rounded-full ${ghostMode ? 'bg-purple-500 animate-pulse shadow-[0_0_8px_#a855f7]' : 'bg-slate-400 opacity-20'}`}></div>
+                </button>
+              )}
+
+               <button 
                 onClick={toggleTheme}
                 className="flex items-center justify-between p-5 rounded-2xl bg-surface/40 border border-border-main text-text-main font-bold"
               >

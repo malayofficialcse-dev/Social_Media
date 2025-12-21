@@ -201,6 +201,66 @@
 }
 
 /* Focus Mode Cinematic Feed */
+/* Ambient Cinematic Background System */
+.ambient-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg-main);
+}
+
+.ambient-blob {
+  position: absolute;
+  filter: blur(120px);
+  border-radius: 50%;
+  opacity: 0.15;
+  transition: all 2s ease-in-out;
+}
+
+.blob-1 {
+  width: 60vw;
+  height: 60vw;
+  background: var(--accent);
+  top: -10%;
+  left: -20%;
+  animation: float-1 25s infinite alternate;
+}
+
+.blob-2 {
+  width: 50vw;
+  height: 50vw;
+  background: #8b5cf6;
+  bottom: -10%;
+  right: -10%;
+  animation: float-2 30s infinite alternate-reverse;
+}
+
+.blob-3 {
+  width: 40vw;
+  height: 40vw;
+  background: #ec4899;
+  top: 30%;
+  left: 40%;
+  animation: float-3 20s infinite alternate;
+}
+
+@keyframes float-1 {
+  from { transform: translate(0, 0) rotate(0deg); }
+  to { transform: translate(10vw, 5vw) rotate(15deg); }
+}
+
+@keyframes float-2 {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(-8vw, -10vw) scale(1.1); }
+}
+
+@keyframes float-3 {
+  from { transform: translate(0, 0); }
+  to { transform: translate(15vw, -5vw); }
+}
+
 .focus-active .PostCard_wrapper:not(.focused-post) {
   filter: blur(8px) grayscale(80%);
   opacity: 0.2;

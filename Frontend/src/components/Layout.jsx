@@ -19,6 +19,13 @@ const Layout = () => {
 
   return (
     <div className="min-h-screen bg-bg-main text-text-main flex flex-col font-sans transition-colors duration-300">
+      {/* Cinematic Ambient Background */}
+      <div className="ambient-bg">
+        <div className="ambient-blob blob-1"></div>
+        <div className="ambient-blob blob-2"></div>
+        <div className="ambient-blob blob-3"></div>
+      </div>
+
       <Header />
       
       <div className="flex flex-1 relative w-full overflow-x-hidden">

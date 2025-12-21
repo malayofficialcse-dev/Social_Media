@@ -3,11 +3,11 @@ import { FaBolt, FaFire, FaGlobe, FaUserPlus, FaHeart } from 'react-icons/fa';
 
 const GlobalActivityTicker = () => {
   const [activities, setActivities] = useState([
-    { id: 1, icon: <FaUserPlus />, text: "New Elite Member joined from Tokyo", color: "text-accent" },
-    { id: 2, icon: <FaFire />, text: "Post in #Technology trending in London", color: "text-amber-500" },
-    { id: 3, icon: <FaBolt />, text: "Social Wealth Score surge in Mumbai", color: "text-purple-500" },
-    { id: 4, icon: <FaHeart />, text: "Elite Badge awarded to 12 active creators", color: "text-rose-500" },
-    { id: 5, icon: <FaGlobe />, text: "Network latency: 24ms - Optimal Stability", color: "text-green-500" }
+    { id: 1, icon: "✨", text: "A Pro Member just joined from London", color: "text-accent" },
+    { id: 2, icon: "🔥", text: "New Poll just went live in Tokyo", color: "text-amber-500" },
+    { id: 3, icon: "🚀", text: "Your post is trending in Paris", color: "text-purple-500" },
+    { id: 4, icon: "💎", text: "New Elite Badge awarded to Top Creator", color: "text-rose-500" },
+    { id: 5, icon: "🌐", text: "Network Sync: 100% - Global Nodes Active", color: "text-green-500" }
   ]);
 
   const [currentIndex, setCurrentIndex] = useState(0);

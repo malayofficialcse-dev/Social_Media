@@ -252,6 +252,23 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
+// TOGGLE GHOST MODE
+export const toggleGhostMode = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user.isPro) {
+      return res.status(403).json({ message: "Ghost Mode requires Elite Pro Membership" });
+    }
+
+    user.isGhostMode = !user.isGhostMode;
+    await user.save();
+
+    res.json({ success: true, isGhostMode: user.isGhostMode, user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // SEED SAMPLE ANALYTICS
 export const seedSampleAnalytics = async (req, res) => {
   try {
@@ -322,6 +339,9 @@ export const logProfileVisit = async (req, res) => {
   try {
     const { id } = req.params;
     if (id === req.user._id.toString()) return res.json({ success: true }); // Don't log own visits
+
+    const visitor = await User.findById(req.user._id);
+    if (visitor?.isGhostMode) return res.json({ success: true, message: "Ghost mode active" });
 
     await logAnalytics('profile_visit', req.user._id, id, null, req.ip);
     res.json({ success: true });
