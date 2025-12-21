@@ -15,13 +15,13 @@ const servers = {
   ],
 };
 
-const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
+const VideoCallModal = ({ partner, callType, incomingSignal, onHangup, callMode = 'video' }) => {
   const { socket } = useSocket();
   const { user } = useAuth();
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(callMode === 'audio');
   const [isCalling, setIsCalling] = useState(callType === 'outgoing');
   const [isAccepted, setIsAccepted] = useState(false);
 
@@ -42,16 +42,16 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
 
   // Sync streams with video elements
   useEffect(() => {
-    if (localVideoRef.current && localStream) {
+    if (localVideoRef.current && localStream && callMode === 'video') {
       localVideoRef.current.srcObject = localStream;
     }
-  }, [localStream]);
+  }, [localStream, callMode]);
 
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
+    if (remoteVideoRef.current && remoteStream && callMode === 'video') {
       remoteVideoRef.current.srcObject = remoteStream;
     }
-  }, [remoteStream]);
+  }, [remoteStream, callMode]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -78,10 +78,12 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
           localStreamRef.current.getTracks().forEach(t => t.stop());
         }
 
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { width: { ideal: 1280 }, height: { ideal: 720 } }, 
-          audio: true 
-        });
+        const constraints = {
+          audio: true,
+          video: callMode === 'video' ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false
+        };
+
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
         if (!isMounted.current) {
           stream.getTracks().forEach(t => t.stop());
@@ -129,7 +131,8 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
             userToCall: partner._id,
             signalData: offer,
             from: user._id,
-            name: user.username
+            name: user.username,
+            callMode // Send call mode to recipient
           });
         } else if (callType === 'incoming' && incomingSignal) {
           await pc.setRemoteDescription(new RTCSessionDescription(incomingSignal));
@@ -147,7 +150,7 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
         } else if (err.name === 'NotReadableError') {
           toast.error("Hardware busy. Close other apps using your camera/mic and REFRESH.");
         } else {
-          toast.error("Could not start video call. Check hardware.");
+          toast.error(`Could not start ${callMode} call. Check hardware.`);
         }
         onHangupRef.current();
       }
@@ -218,7 +221,7 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
       clearTimeout(timer);
     };
     // Note: Dependencies kept to essential identity factors to avoid re-mounting logic mid-call
-  }, [partner._id, callType, incomingSignal, socket, user._id, user.username]);
+  }, [partner._id, callType, incomingSignal, socket, user._id, user.username, callMode]);
 
   const toggleMute = () => {
     if (localStream) {
@@ -231,7 +234,7 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
   };
 
   const toggleVideo = () => {
-    if (localStream) {
+    if (localStream && callMode === 'video') {
       const videoTrack = localStream.getVideoTracks()[0];
       if (videoTrack) {
         videoTrack.enabled = !videoTrack.enabled;
@@ -247,46 +250,71 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
 
   return (
     <div className="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center p-4">
-      <div className="relative w-full max-w-4xl aspect-video rounded-2xl overflow-hidden glass border-white/10 shadow-2xl">
+      <div className={`relative w-full max-w-4xl ${callMode === 'audio' ? 'aspect-square max-w-md' : 'aspect-video'} rounded-2xl overflow-hidden glass border-white/10 shadow-2xl`}>
         
-        {/* Remote Video (Main) */}
+        {/* Main Content Area */}
         <div className="absolute inset-0 bg-slate-800">
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className="w-full h-full object-cover"
-          />
-          {(!isAccepted || !remoteStream) && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-md">
-              <img 
-                src={partner.profileImage || `https://ui-avatars.com/api/?name=${partner.username}&background=random`} 
-                className={`w-32 h-32 rounded-full border-4 border-accent/20 ${isCalling ? 'animate-pulse' : ''}`}
-                alt={partner.username}
+          {callMode === 'video' ? (
+            <>
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                className="w-full h-full object-cover"
               />
-              <h2 className="text-2xl font-black text-white mt-6 uppercase tracking-widest">{partner.username}</h2>
+              {(!isAccepted || !remoteStream) && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-md">
+                  <img 
+                    src={partner.profileImage || `https://ui-avatars.com/api/?name=${partner.username}&background=random`} 
+                    className={`w-32 h-32 rounded-full border-4 border-accent/20 ${isCalling ? 'animate-pulse' : ''}`}
+                    alt={partner.username}
+                  />
+                  <h2 className="text-2xl font-black text-white mt-6 uppercase tracking-widest">{partner.username}</h2>
+                  <p className="text-slate-400 mt-2 font-bold uppercase tracking-tighter">
+                    {isCalling ? "Calling..." : "Connecting..."}
+                  </p>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-md">
+              <div className="relative">
+                <img 
+                  src={partner.profileImage || `https://ui-avatars.com/api/?name=${partner.username}&background=random`} 
+                  className={`w-48 h-48 rounded-full border-4 border-accent/20 ${isCalling ? 'animate-pulse' : 'ring-4 ring-green-500/30'}`}
+                  alt={partner.username}
+                />
+                {isAccepted && (
+                  <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-green-500 text-white px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest">
+                    Connected
+                  </div>
+                )}
+              </div>
+              <h2 className="text-2xl font-black text-white mt-12 uppercase tracking-widest">{partner.username}</h2>
               <p className="text-slate-400 mt-2 font-bold uppercase tracking-tighter">
-                {isCalling ? "Calling..." : "Connecting..."}
+                {isCalling ? "Outgoing Voice Call..." : isAccepted ? "On Call" : "Incoming Voice Call..."}
               </p>
             </div>
           )}
         </div>
 
-        {/* Local Video (PIP) */}
-        <div className="absolute top-4 right-4 w-1/4 max-w-[200px] aspect-video rounded-xl overflow-hidden border-2 border-white/20 shadow-2xl z-10">
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full h-full object-cover bg-slate-700"
-          />
-          {isVideoOff && (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-800">
-              <FaVideoSlash className="text-white/40" />
-            </div>
-          )}
-        </div>
+        {/* Local Video (PIP) - Only for Video Call */}
+        {callMode === 'video' && (
+          <div className="absolute top-4 right-4 w-1/4 max-w-[200px] aspect-video rounded-xl overflow-hidden border-2 border-white/20 shadow-2xl z-10">
+            <video
+              ref={localVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover bg-slate-700"
+            />
+            {isVideoOff && (
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-800">
+                <FaVideoSlash className="text-white/40" />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Controls Overlay */}
         <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-6 z-20">
@@ -304,12 +332,14 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
             <FaPhoneSlash size={32} />
           </button>
 
-          <button
-            onClick={toggleVideo}
-            className={`p-4 rounded-full transition-all ${isVideoOff ? 'bg-red-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
-          >
-            {isVideoOff ? <FaVideoSlash size={24} /> : <FaVideo size={24} />}
-          </button>
+          {callMode === 'video' && (
+            <button
+              onClick={toggleVideo}
+              className={`p-4 rounded-full transition-all ${isVideoOff ? 'bg-red-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+            >
+              {isVideoOff ? <FaVideoSlash size={24} /> : <FaVideo size={24} />}
+            </button>
+          )}
         </div>
       </div>
       
@@ -324,5 +354,6 @@ const VideoCallModal = ({ partner, callType, incomingSignal, onHangup }) => {
     </div>
   );
 };
+
 
 export default VideoCallModal;

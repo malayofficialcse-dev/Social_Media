@@ -22,8 +22,8 @@ const Chat = () => {
   const [messages, setMessages] = useState([]);
   
   // Call State
-  const [callSession, setCallSession] = useState(null); // { partner, type: 'incoming'|'outgoing', signal }
-  const [incomingCall, setIncomingCall] = useState(null); // { from, name, signal }
+  const [callSession, setCallSession] = useState(null); // { partner, type: 'incoming'|'outgoing', signal, callMode }
+  const [incomingCall, setIncomingCall] = useState(null); // { from, name, signal, callMode }
   
   const [newMessage, setNewMessage] = useState('');
   const [image, setImage] = useState(null);
@@ -212,8 +212,8 @@ const Chat = () => {
       });
 
       // Call Listeners
-      socket.on('incoming-call', ({ from, name, signal }) => {
-        setIncomingCall({ from, name, signal });
+      socket.on('incoming-call', ({ from, name, signal, callMode }) => {
+        setIncomingCall({ from, name, signal, callMode: callMode || 'video' });
       });
 
       socket.on('call-ended', () => {
@@ -469,9 +469,9 @@ const Chat = () => {
     }
   };
 
-  const handleStartCall = () => {
+  const handleStartCall = (mode = 'video') => {
     if (!selectedChat || selectedChat.isGroup) return;
-    setCallSession({ partner: selectedChat, type: 'outgoing' });
+    setCallSession({ partner: selectedChat, type: 'outgoing', callMode: mode });
   };
 
   const handleAcceptCall = () => {
@@ -479,7 +479,8 @@ const Chat = () => {
     setCallSession({ 
       partner: partner || { _id: incomingCall.from, username: incomingCall.name }, 
       type: 'incoming', 
-      signal: incomingCall.signal 
+      signal: incomingCall.signal,
+      callMode: incomingCall.callMode
     });
     setIncomingCall(null);
   };
@@ -726,13 +727,22 @@ const Chat = () => {
               
               <div className="flex items-center gap-2">
                 {isMutual && (
-                  <button 
-                    onClick={handleStartCall}
-                    className="text-slate-400 hover:text-accent p-2 transition-colors"
-                    title="Video Call"
-                  >
-                    <FaVideo size={20} />
-                  </button>
+                  <>
+                    <button 
+                      onClick={() => handleStartCall('audio')}
+                      className="text-slate-400 hover:text-accent p-2 transition-colors"
+                      title="Voice Call"
+                    >
+                      <FaPhoneAlt size={18} />
+                    </button>
+                    <button 
+                      onClick={() => handleStartCall('video')}
+                      className="text-slate-400 hover:text-accent p-2 transition-colors"
+                      title="Video Call"
+                    >
+                      <FaVideo size={20} />
+                    </button>
+                  </>
                 )}
                 {selectedChat.isGroup && (
                     <button onClick={() => setShowGroupInfo(true)} className="text-slate-400 hover:text-white p-2">
@@ -1038,6 +1048,7 @@ const Chat = () => {
           partner={callSession.partner} 
           callType={callSession.type} 
           incomingSignal={callSession.signal}
+          callMode={callSession.callMode}
           onHangup={() => setCallSession(null)} 
         />
       )}
@@ -1056,7 +1067,9 @@ const Chat = () => {
             </div>
             <div>
               <p className="text-white font-bold leading-none">{incomingCall.name}</p>
-              <p className="text-slate-400 text-xs mt-1 font-medium">Incoming Video Call...</p>
+              <p className="text-slate-400 text-xs mt-1 font-medium italic">
+                Incoming {incomingCall.callMode === 'audio' ? 'Voice' : 'Video' } Call...
+              </p>
             </div>
           </div>
           <div className="flex gap-2 mt-4">
