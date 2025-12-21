@@ -4,6 +4,7 @@ import image1 from '../assets/Screenshot 2025-12-19 230324.png';
 import image2 from '../assets/Screenshot 2025-12-19 230348.png';
 import image3 from '../assets/Screenshot 2025-12-19 230526.png';
 import image4 from '../assets/Screenshot 2025-12-19 230611.png';
+import Logo from '../components/Logo';
 
 const About = () => {
   const team = [
@@ -77,9 +78,10 @@ const About = () => {
         >
           Our Story
         </motion.div>
-        <h1 className="text-6xl md:text-8xl font-black mb-6 bg-gradient-to-r from-text-main via-text-main/80 to-text-muted bg-clip-text text-transparent tracking-tight">
-          P Connect
-        </h1>
+        <div className="flex justify-center mb-8">
+          <Logo className="w-20 h-20" textClassName="text-5xl md:text-7xl" />
+        </div>
+        <h1 className="sr-only">P Connect</h1>
         <p className="text-xl md:text-2xl text-text-muted max-w-3xl mx-auto leading-relaxed font-light">
           Redefining social connectivity for the modern age. A space where 
           privacy meets innovation, and connections become meaningful.

@@ -1,10 +1,11 @@
-import { Link } from 'react-router-dom';
-import { FaUser, FaSignOutAlt, FaHome, FaInfoCircle, FaEnvelope, FaSearch, FaBars, FaBell, FaPaperPlane, FaSun, FaMoon } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
+import { FaUser, FaSignOutAlt, FaHome, FaInfoCircle, FaSearch, FaBars, FaBell, FaPaperPlane, FaSun, FaMoon, FaUsers, FaTimes } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import Logo from './Logo';
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -14,6 +15,7 @@ const Header = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const searchUsers = async () => {
@@ -33,33 +35,36 @@ const Header = () => {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
+  const handleMobileNav = (path) => {
+    navigate(path);
+    setIsMenuOpen(false);
+  };
+
   return (
-    <header className="sticky top-0 z-50 glass border-b border-white/5 py-2 px-4 md:px-6">
-      <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+    <header className="sticky top-0 z-[60] glass border-b border-border-main/20 py-3 px-4 md:px-8 transition-all duration-500">
+      <div className="max-w-[1700px] mx-auto flex items-center justify-between gap-6">
+        <div className="flex items-center gap-6">
           <button 
-            className="md:hidden text-slate-300 hover:text-white p-2 hover:bg-white/5 rounded-lg transition-all"
+            className="lg:hidden text-text-muted hover:text-text-main p-2.5 hover:bg-surface/50 rounded-2xl transition-all border border-transparent active:scale-95"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            <FaBars size={20} />
+            {isMenuOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
           </button>
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 bg-accent rounded-xl flex items-center justify-center shadow-lg shadow-accent/20 group-hover:scale-110 transition-transform">
-              <span className="text-white font-black text-xl">P</span>
-            </div>
-            <span className="text-xl font-black gradient-text tracking-tighter hidden sm:block">Connect</span>
+          
+          <Link to="/">
+            <Logo />
           </Link>
         </div>
         
-        {/* Search Bar */}
-        <div className="relative flex-1 max-w-lg hidden md:block">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <FaSearch className="text-slate-500 w-4 h-4" />
+        {/* Desktop Search Bar */}
+        <div className="relative flex-1 max-w-xl hidden lg:block group">
+          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-transform group-focus-within:scale-110">
+            <FaSearch className="text-text-muted w-4 h-4 group-focus-within:text-accent transition-colors" />
           </div>
           <input
             type="text"
-            className="block w-full pl-11 pr-4 py-2 bg-surface border border-border-main rounded-2xl text-text-main placeholder-text-muted focus:outline-none focus:bg-surface focus:border-accent/30 focus:ring-4 focus:ring-accent/5 transition-all text-sm"
-            placeholder="Explore users..."
+            className="block w-full pl-12 pr-6 py-2.5 bg-bg-main/40 border border-border-main/50 rounded-[1.25rem] text-text-main placeholder-text-muted/60 focus:outline-none focus:bg-surface focus:border-accent/40 focus:ring-8 focus:ring-accent/5 transition-all text-sm font-medium shadow-sm hover:shadow-md"
+            placeholder="Search the network..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -70,115 +75,184 @@ const Header = () => {
           />
           
           {showResults && searchResults.length > 0 && (
-            <div className="absolute mt-2 w-full glass border border-border-main rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto p-2 animate-in fade-in zoom-in-95 duration-200">
-              {searchResults.map((result) => (
-                <Link 
-                  key={result._id} 
-                  to={`/profile/${result._id}`}
-                  className="flex items-center gap-3 px-3 py-2.5 hover:bg-bg-main/50 rounded-xl transition-all"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setShowResults(false);
-                  }}
-                >
-                  <img 
-                    src={result.profileImage || "https://via.placeholder.com/40"} 
-                    alt={result.username} 
-                    className="w-9 h-9 rounded-full object-cover border border-border-main"
-                  />
-                  <div>
-                    <p className="text-sm font-semibold text-text-main leading-tight">{result.username}</p>
-                    <p className="text-[11px] text-text-muted truncate max-w-[200px]">{result.bio || "Active member"}</p>
-                  </div>
-                </Link>
-              ))}
+            <div className="absolute mt-3 w-full glass-card border border-border-main/60 rounded-[2rem] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] z-[70] max-h-[70vh] overflow-y-auto p-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted/40 mb-3 px-3">Top Profiles</p>
+              <div className="space-y-1">
+                {searchResults.map((result) => (
+                  <Link 
+                    key={result._id} 
+                    to={`/profile/${result._id}`}
+                    className="flex items-center gap-4 px-4 py-3 hover:bg-accent/5 rounded-[1.25rem] transition-all group/item border border-transparent hover:border-accent/10"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setShowResults(false);
+                    }}
+                  >
+                    <div className="relative">
+                      <img 
+                        src={result.profileImage || `https://ui-avatars.com/api/?name=${result.username}`} 
+                        alt={result.username} 
+                        className="w-10 h-10 rounded-full object-cover border-2 border-border-main group-hover/item:border-accent/40 transition-colors"
+                      />
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-surface rounded-full"></div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-text-main leading-tight group-hover/item:text-accent transition-colors">{result.username}</p>
+                      <p className="text-[11px] text-text-muted truncate max-w-[250px] font-medium">{result.bio || "Platform Creator"}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
         {/* Desktop Nav */}
-        <nav className="hidden lg:flex items-center gap-2">
-          <Link to="/" title="Home" className="p-2.5 rounded-xl text-text-muted hover:text-text-main hover:bg-accent/5 transition-all">
-            <FaHome size={22} />
+        <nav className="hidden lg:flex items-center gap-1.5 p-1.5 bg-surface/30 border border-border-main/30 rounded-2xl">
+          <Link to="/" title="Home" className="p-3 rounded-xl text-text-muted hover:text-accent hover:bg-accent/5 transition-all group">
+            <FaHome size={22} className="group-hover:scale-110 transition-transform" />
           </Link>
-          <Link to="/notifications" title="Notifications" className="p-2.5 rounded-xl text-text-muted hover:text-text-main hover:bg-accent/5 transition-all relative">
-            <FaBell size={21} />
+          <Link to="/notifications" title="Notifications" className="p-3 rounded-xl text-text-muted hover:text-accent hover:bg-accent/5 transition-all relative group">
+            <FaBell size={21} className="group-hover:scale-110 transition-transform" />
             {unreadCount > 0 && (
-              <span className="absolute top-2 right-2 bg-red-500 text-white text-[9px] font-black rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border-2 border-surface">
+              <span className="absolute top-2.5 right-2.5 bg-accent text-white text-[9px] font-black rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border-2 border-surface">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </Link>
-          <Link to="/chat" title="Messages" className="p-2.5 rounded-xl text-text-muted hover:text-text-main hover:bg-accent/5 transition-all">
-            <FaPaperPlane size={20} />
+          <Link to="/chat" title="Messages" className="p-3 rounded-xl text-text-muted hover:text-accent hover:bg-accent/5 transition-all group">
+            <FaPaperPlane size={20} className="group-hover:scale-110 transition-transform" />
           </Link>
-          <Link to="/about" title="About" className="p-2.5 rounded-xl text-text-muted hover:text-text-main hover:bg-accent/5 transition-all">
-            <FaInfoCircle size={21} />
+          <Link to="/about" title="About" className="p-3 rounded-xl text-text-muted hover:text-accent hover:bg-accent/5 transition-all group border-l border-border-main/20 ml-1">
+            <FaInfoCircle size={21} className="group-hover:scale-110 transition-transform" />
           </Link>
-          {user?.role === 'admin' && (
-            <Link to="/admin" title="Admin" className="p-2.5 rounded-xl text-text-muted hover:text-accent hover:bg-accent/5 transition-all">
-              <FaUser size={20} />
-            </Link>
-          )}
           <button 
             onClick={toggleTheme}
-            className="p-2.5 rounded-xl text-text-muted hover:text-accent hover:bg-accent/5 transition-all"
-            title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            className="p-3 rounded-xl text-text-muted hover:text-accent hover:bg-accent/5 transition-all group"
+            title={theme === 'dark' ? "Eye Care: Enabled" : "High Contrast: On"}
           >
-            {theme === 'dark' ? <FaSun size={20} /> : <FaMoon size={20} />}
+            {theme === 'dark' ? <FaSun size={20} className="group-hover:rotate-45 transition-transform" /> : <FaMoon size={20} className="group-hover:-rotate-12 transition-transform" />}
           </button>
         </nav>
 
-        {/* User Profile / Auth */}
-        <div className="flex items-center gap-2 md:gap-4 ml-2">
+        {/* User Workspace */}
+        <div className="flex items-center gap-3">
           {user ? (
-            <>
-              <div className="h-8 w-[1px] bg-border-main mx-1 hidden md:block"></div>
-              <Link to={`/profile/${user._id}`} className="flex items-center gap-3 p-1.5 pl-1.5 pr-4 rounded-full hover:bg-bg-main/50 transition-all border border-transparent hover:border-border-main">
+            <div className="flex items-center gap-3 p-1 rounded-2xl border border-border-main/10 bg-surface/20">
+              <Link to={`/profile/${user._id}`} className="flex items-center gap-3 pl-1 pr-4 py-1 rounded-xl transition-all hover:bg-accent/5 group">
                 <img 
-                  src={user.profileImage || "https://via.placeholder.com/32"} 
-                  alt="Profile" 
-                  className="w-8 h-8 rounded-full object-cover border-2 border-border-main shadow-sm"
+                  src={user.profileImage || `https://ui-avatars.com/api/?name=${user.username}`} 
+                  alt="My Profile" 
+                  className="w-9 h-9 rounded-xl object-cover border border-border-main group-hover:border-accent/40 shadow-sm"
                 />
-                <span className="text-sm font-semibold text-text-main hidden xl:block">{user.username?.split(' ')[0]}</span>
+                <div className="hidden xl:flex flex-col items-start -space-y-1">
+                  <span className="text-[13px] font-black text-text-main group-hover:text-accent transition-colors">{user.username?.split(' ')[0]}</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-text-muted/60">Professional</span>
+                </div>
               </Link>
               <button 
                 onClick={logout}
-                className="p-2.5 rounded-xl text-text-muted hover:text-red-500 hover:bg-red-500/5 transition-all"
-                title="Logout"
+                className="w-10 h-10 rounded-xl text-text-muted hover:text-red-500 hover:bg-red-500/5 transition-all flex items-center justify-center border-l border-border-main/10"
+                title="Secure logout"
               >
                 <FaSignOutAlt size={18} />
               </button>
-            </>
+            </div>
           ) : (
             <div className="flex items-center gap-3">
-              <Link to="/login" className="text-slate-400 hover:text-white text-sm font-semibold px-4 py-2 transition-all">Login</Link>
-              <Link to="/register" className="btn btn-primary text-sm px-6 py-2">Join Now</Link>
+              <Link to="/login" className="text-text-muted hover:text-text-main text-sm font-black px-4 py-2 transition-all uppercase tracking-widest">Login</Link>
+              <Link to="/register" className="bg-accent text-white px-8 py-2.5 rounded-xl text-sm font-black shadow-lg shadow-accent/20 hover:scale-105 transition-all active:scale-95">Enroll Now</Link>
             </div>
           )}
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile/Tablet Drawer Content */}
       {isMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 w-full glass border-b border-white/10 p-4 shadow-2xl animate-in slide-in-from-top-4 duration-300">
-           {/* ... mobile menu content ... */}
-           <div className="flex flex-col gap-2">
-              <Link to="/" className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 text-slate-200" onClick={() => setIsMenuOpen(false)}>
-                <FaHome className="text-accent" /> <span className="font-semibold">Home</span>
-              </Link>
-              <Link to="/notifications" className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 text-slate-200" onClick={() => setIsMenuOpen(false)}>
-                <FaBell className="text-accent" /> <span className="font-semibold">Notifications</span>
-              </Link>
-              <Link to="/chat" className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 text-slate-200" onClick={() => setIsMenuOpen(false)}>
-                <FaPaperPlane className="text-accent" /> <span className="font-semibold">Messages</span>
-              </Link>
-              <button 
-                onClick={() => { logout(); setIsMenuOpen(false); }}
-                className="flex items-center gap-4 p-3 rounded-xl hover:bg-red-400/5 text-red-400 transition-all font-semibold"
-              >
-                <FaSignOutAlt /> Sign Out
+        <div className="lg:hidden absolute top-full left-0 w-full glass border-b border-border-main/40 p-6 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] animate-in slide-in-from-top-4 duration-500 overflow-y-auto max-h-[calc(100vh-80px)]">
+           {/* Enhanced Mobile Search */}
+           <div className="mb-8 relative">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-accent mb-3 px-1">Network Discovery</p>
+              <div className="relative">
+                <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
+                <input 
+                  type="text"
+                  placeholder="Find collaborators..."
+                  className="w-full pl-12 pr-4 py-4 bg-bg-main/50 border border-border-main rounded-2xl text-text-main focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all font-bold"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              
+              {searchQuery && searchResults.length > 0 && (
+                <div className="mt-4 space-y-3 bg-surface/50 rounded-2xl p-3 border border-border-main">
+                   {searchResults.slice(0, 5).map(result => (
+                      <Link key={result._id} to={`/profile/${result._id}`} onClick={() => setIsMenuOpen(false)} className="flex items-center gap-4 p-2 rounded-xl border border-transparent hover:bg-accent/5">
+                         <img src={result.profileImage || `https://ui-avatars.com/api/?name=${result.username}`} className="w-10 h-10 rounded-full border border-border-main" />
+                         <span className="font-bold text-sm text-text-main">{result.username}</span>
+                      </Link>
+                   ))}
+                </div>
+              )}
+           </div>
+
+           <div className="grid grid-cols-2 gap-4 mb-8">
+              <button onClick={() => handleMobileNav('/')} className="flex flex-col items-center justify-center gap-2 p-6 rounded-3xl bg-surface/40 border border-border-main hover:border-accent/30 transition-all group">
+                <FaHome className="text-accent group-hover:scale-110 transition-transform" size={24} /> 
+                <span className="font-black text-[11px] uppercase tracking-widest text-text-main">Home</span>
               </button>
+              <button onClick={() => handleMobileNav('/chat')} className="flex flex-col items-center justify-center gap-2 p-6 rounded-3xl bg-surface/40 border border-border-main hover:border-accent/30 transition-all group">
+                <FaPaperPlane className="text-accent group-hover:scale-110 transition-transform" size={22} /> 
+                <span className="font-black text-[11px] uppercase tracking-widest text-text-main">Messages</span>
+              </button>
+              <button onClick={() => handleMobileNav('/notifications')} className="flex flex-col items-center justify-center gap-2 p-6 rounded-3xl bg-surface/40 border border-border-main hover:border-accent/30 transition-all group relative">
+                <FaBell className="text-accent group-hover:scale-110 transition-transform" size={22} /> 
+                <span className="font-black text-[11px] uppercase tracking-widest text-text-main">Alerts</span>
+                {unreadCount > 0 && <div className="absolute top-4 right-4 w-3 h-3 bg-red-500 rounded-full border-2 border-surface"></div>}
+              </button>
+              <button onClick={() => handleMobileNav('/')} className="flex flex-col items-center justify-center gap-2 p-6 rounded-3xl bg-accent text-white shadow-xl shadow-accent/20 transition-all active:scale-95">
+                <FaUsers size={22} /> 
+                <span className="font-black text-[11px] uppercase tracking-widest">Community</span>
+              </button>
+           </div>
+
+           <div className="flex flex-col gap-3">
+              <button onClick={() => handleMobileNav('/about')} className="flex items-center justify-between p-5 rounded-2xl bg-surface/20 border border-border-main text-text-muted hover:text-text-main transition-all font-bold">
+                 <div className="flex items-center gap-4">
+                    <FaInfoCircle size={18} /> <span>About P Connect</span>
+                 </div>
+                 <FaUser size={12} className="opacity-20" />
+              </button>
+              
+              {user?.role === 'admin' && (
+                <button onClick={() => handleMobileNav('/admin')} className="flex items-center gap-4 p-5 rounded-2xl bg-purple-500/5 border border-purple-500/20 text-purple-600 font-bold transition-all">
+                  <FaUser size={18} /> Admin Command Center
+                </button>
+              )}
+
+              <div className="h-[1px] bg-border-main/50 my-2"></div>
+
+              <button 
+                onClick={toggleTheme}
+                className="flex items-center justify-between p-5 rounded-2xl bg-surface/40 border border-border-main text-text-main font-bold"
+              >
+                <div className="flex items-center gap-4">
+                  {theme === 'dark' ? <FaSun size={18} /> : <FaMoon size={18} />}
+                  <span>{theme === 'dark' ? 'Light Appearance' : 'Dark Appearance'}</span>
+                </div>
+                <div className="w-10 h-5 bg-border-main rounded-full relative">
+                   <div className={`absolute top-1 w-3 h-3 rounded-full transition-all ${theme === 'dark' ? 'right-1 bg-accent' : 'left-1 bg-slate-400'}`}></div>
+                </div>
+              </button>
+
+              {user && (
+                <button 
+                  onClick={() => { logout(); setIsMenuOpen(false); }}
+                  className="mt-4 flex items-center justify-center gap-4 p-5 rounded-2xl bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black uppercase tracking-widest text-sm"
+                >
+                  <FaSignOutAlt /> Terminate Session
+                </button>
+              )}
            </div>
         </div>
       )}
