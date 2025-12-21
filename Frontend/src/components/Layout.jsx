@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import RightSidebar from './RightSidebar';
 import Header from './Header';
 import Footer from './Footer';
+import GlobalActivityTicker from './GlobalActivityTicker';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -33,6 +34,7 @@ const Layout = () => {
       </div>
 
       <Footer />
+      <GlobalActivityTicker />
       <ToastContainer theme={theme} position="bottom-right" />
     </div>
   );

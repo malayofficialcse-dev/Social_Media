@@ -399,11 +399,35 @@ export const getUserAnalytics = async (req, res) => {
       }
     }
 
-    // Network Score Calculation (Simple formula)
-    // Base 50 + (Followers * 2) + (Engagements * 5) + (Profile Visits * 1)
+    // Network Score Calculation
     const user = await User.findById(userId);
     const followersCount = user.followers.length;
     const score = Math.min(100, 30 + (followersCount * 0.5) + (engagements.length * 2) + (profileVisits.length * 0.1));
+
+    // Neural Radar Calculations
+    const last7Days = new Date();
+    last7Days.setDate(last7Days.getDate() - 7);
+    const recentEngagements = engagements.filter(e => e.createdAt >= last7Days).length;
+    
+    // 1. Reach (Global views)
+    const reachScore = Math.min(100, (profileVisits.length / 20) * 100);
+    // 2. Engagement (Action density)
+    const engagementScore = Math.min(100, (engagements.length / 15) * 100);
+    // 3. Loyalty (Follower conversion / stability)
+    const loyaltyScore = profileVisits.length > 0 ? Math.min(100, (followersCount / profileVisits.length) * 100) : 50;
+    // 4. Momentum (Growth speed)
+    const momentumScore = Math.min(100, (recentEngagements / (engagements.length || 1)) * 200);
+    // 5. Versatility (Feature usage diversity)
+    const uniqueEngagementTypes = new Set(engagements.map(e => e.type)).size;
+    const versatilityScore = Math.min(100, (uniqueEngagementTypes / 5) * 100);
+
+    const neuralRadar = [
+      { subject: 'Reach', A: Math.round(reachScore), fullMark: 100 },
+      { subject: 'Engagement', A: Math.round(engagementScore), fullMark: 100 },
+      { subject: 'Loyalty', A: Math.round(loyaltyScore), fullMark: 100 },
+      { subject: 'Momentum', A: Math.round(momentumScore), fullMark: 100 },
+      { subject: 'Versatility', A: Math.round(versatilityScore), fullMark: 100 },
+    ];
 
     res.json({
       success: true,
@@ -411,9 +435,10 @@ export const getUserAnalytics = async (req, res) => {
         totalViews: profileVisits.length,
         totalEngagements: engagements.length,
         networkScore: Math.round(score),
-        recentVisitors: profileVisits.slice(-5).map(v => v.userId).filter(u => u), // Last 5 visitors
+        recentVisitors: profileVisits.slice(-5).map(v => v.userId).filter(u => u),
         locations,
-        trendingPost
+        trendingPost,
+        neuralRadar
       }
     });
   } catch (error) {

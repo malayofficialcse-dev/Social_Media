@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area, PieChart, Pie, Cell
+  AreaChart, Area, PieChart, Pie, Cell,
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis 
 } from 'recharts';
 import { 
   FaGlobe, FaArrowUp, FaUsers, FaEye, FaBolt, FaCrown, FaStar, 
@@ -154,8 +155,63 @@ const Analytics = () => {
           <p className="text-xs font-bold text-text-muted uppercase tracking-widest mt-1">Network Standing</p>
         </div>
       </div>
-
+      
+      {/* Dynamic Insights Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Neural Reputation Radar */}
+        <div className="card glass-premium p-8 group overflow-hidden relative">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-accent/10 transition-colors"></div>
+           
+           <div className="flex items-center justify-between mb-8">
+             <div>
+               <h2 className="text-xl font-black text-text-main flex items-center gap-2">
+                 <FaBolt className="text-accent" /> Neural Reputation Radar
+               </h2>
+               <p className="text-[11px] font-bold text-text-muted uppercase tracking-widest mt-1">Multi-dimensional Influence Analysis</p>
+             </div>
+             <div className="px-3 py-1 bg-accent/5 border border-accent/20 rounded-lg text-[10px] font-black text-accent uppercase">Advanced AI Analysis</div>
+           </div>
+
+           <div className="h-80 w-full flex items-center justify-center">
+             <ResponsiveContainer width="100%" height="100%">
+               <RadarChart cx="50%" cy="50%" outerRadius="80%" data={stats.neuralRadar || []}>
+                 <PolarGrid stroke="var(--border-main)" strokeOpacity={0.2} />
+                 <PolarAngleAxis 
+                   dataKey="subject" 
+                   tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 900 }} 
+                 />
+                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                 <Radar
+                   name="Reputation"
+                   dataKey="A"
+                   stroke="var(--accent)"
+                   strokeWidth={3}
+                   fill="var(--accent)"
+                   fillOpacity={0.4}
+                   animationDuration={1500}
+                 />
+                 <Tooltip 
+                   contentStyle={{ 
+                     backgroundColor: 'var(--card-bg)', 
+                     borderRadius: '1rem', 
+                     border: '1px solid var(--border-main)',
+                     boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+                   }}
+                   itemStyle={{ color: 'var(--text-main)', fontSize: '12px', fontWeight: 'bold' }}
+                 />
+               </RadarChart>
+             </ResponsiveContainer>
+           </div>
+           
+           <div className="mt-8 grid grid-cols-5 gap-2">
+              {stats.neuralRadar?.map((item, i) => (
+                <div key={i} className="text-center">
+                  <span className="block text-[8px] font-black text-text-muted uppercase mb-1">{item.subject}</span>
+                  <span className="block text-xs font-black text-text-main">{item.A}%</span>
+                </div>
+              ))}
+           </div>
+        </div>
         {/* Engagement Landscape */}
         <div className="card glass-premium p-8">
           <div className="flex items-center justify-between mb-8">
