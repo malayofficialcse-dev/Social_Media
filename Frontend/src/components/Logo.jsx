@@ -1,16 +1,16 @@
 import React from 'react';
 
-const Logo = ({ className = "w-10 h-10", textClassName = "text-2xl" }) => {
+const Logo = ({ className = "", iconClassName = "w-9 h-9", textClassName = "text-xl" }) => {
   return (
-    <div className={`flex items-center gap-2.5 group cursor-pointer transition-all duration-500 hover:scale-105 ${className}`}>
-      <div className="relative">
+    <div className={`flex items-center gap-2 group cursor-pointer transition-all duration-500 hover:scale-105 w-fit ${className}`}>
+      <div className="relative shrink-0">
         {/* Main Logo Hexagon/Shaped Background */}
-        <div className="w-10 h-10 bg-gradient-to-br from-accent via-accent-hover to-purple-600 rounded-[14px] flex items-center justify-center shadow-[0_8px_20px_-6px_rgba(6,182,212,0.6)] transform rotate-12 group-hover:rotate-0 transition-all duration-500">
+        <div className={`${iconClassName} bg-gradient-to-br from-accent via-accent-hover to-purple-600 rounded-[12px] flex items-center justify-center shadow-[0_8px_20px_-6px_rgba(6,182,212,0.6)] transform rotate-12 group-hover:rotate-0 transition-all duration-500`}>
            {/* Inner white glow */}
-           <div className="absolute inset-0 rounded-[14px] bg-white/10 blur-[2px] opacity-50"></div>
+           <div className="absolute inset-0 rounded-[12px] bg-white/10 blur-[2px] opacity-50"></div>
            
            {/* The 'P' Icon */}
-           <span className="text-white font-black text-2xl -rotate-12 group-hover:rotate-0 transition-all duration-500 select-none">P</span>
+           <span className="text-white font-black text-xl -rotate-12 group-hover:rotate-0 transition-all duration-500 select-none">P</span>
         </div>
         
         {/* Floating Accent Dot */}

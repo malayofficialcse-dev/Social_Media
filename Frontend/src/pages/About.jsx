@@ -79,7 +79,11 @@ const About = () => {
           Our Story
         </motion.div>
         <div className="flex justify-center mb-8">
-          <Logo className="w-20 h-20" textClassName="text-5xl md:text-7xl" />
+          <Logo 
+            className="flex-col md:flex-row gap-4" 
+            iconClassName="w-16 h-16 md:w-24 md:h-24" 
+            textClassName="text-5xl md:text-8xl" 
+          />
         </div>
         <h1 className="sr-only">P Connect</h1>
         <p className="text-xl md:text-2xl text-text-muted max-w-3xl mx-auto leading-relaxed font-light">

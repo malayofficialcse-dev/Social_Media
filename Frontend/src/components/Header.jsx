@@ -41,23 +41,26 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-[60] glass border-b border-border-main/20 py-3 px-4 md:px-8 transition-all duration-500">
-      <div className="max-w-[1700px] mx-auto flex items-center justify-between gap-6">
-        <div className="flex items-center gap-6">
+    <header className="sticky top-0 left-0 right-0 w-full z-[70] bg-surface/80 backdrop-blur-xl border-b border-border-main/20 py-2 md:py-3 transition-all duration-500 shadow-sm">
+      <div className="w-full max-w-[1700px] mx-auto px-4 md:px-8 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 md:gap-6">
           <button 
-            className="lg:hidden text-text-muted hover:text-text-main p-2.5 hover:bg-surface/50 rounded-2xl transition-all border border-transparent active:scale-95"
+            className="lg:hidden text-text-muted hover:text-text-main p-2 hover:bg-surface/50 rounded-xl transition-all border border-transparent active:scale-95"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            {isMenuOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
+            {isMenuOpen ? <FaTimes size={18} /> : <FaBars size={18} />}
           </button>
           
-          <Link to="/">
-            <Logo />
+          <Link to="/" className="shrink-0">
+            <Logo 
+              iconClassName="w-7 h-7 md:w-9 h-9" 
+              textClassName="text-base md:text-xl" 
+            />
           </Link>
         </div>
         
         {/* Desktop Search Bar */}
-        <div className="relative flex-1 max-w-xl hidden lg:block group">
+        <div className="relative flex-1 max-w-xl hidden lg:block group mx-6">
           <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-transform group-focus-within:scale-110">
             <FaSearch className="text-text-muted w-4 h-4 group-focus-within:text-accent transition-colors" />
           </div>
@@ -75,7 +78,7 @@ const Header = () => {
           />
           
           {showResults && searchResults.length > 0 && (
-            <div className="absolute mt-3 w-full glass-card border border-border-main/60 rounded-[2rem] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] z-[70] max-h-[70vh] overflow-y-auto p-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="absolute mt-3 w-full bg-surface border border-border-main/60 rounded-[2rem] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] z-[70] max-h-[70vh] overflow-y-auto p-3 animate-in fade-in slide-in-from-top-2 duration-300">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted/40 mb-3 px-3">Top Profiles</p>
               <div className="space-y-1">
                 {searchResults.map((result) => (
@@ -108,7 +111,7 @@ const Header = () => {
         </div>
 
         {/* Desktop Nav */}
-        <nav className="hidden lg:flex items-center gap-1.5 p-1.5 bg-surface/30 border border-border-main/30 rounded-2xl">
+        <nav className="hidden lg:flex items-center gap-1 p-1 bg-surface/30 border border-border-main/30 rounded-2xl mr-4">
           <Link to="/" title="Home" className="p-3 rounded-xl text-text-muted hover:text-accent hover:bg-accent/5 transition-all group">
             <FaHome size={22} className="group-hover:scale-110 transition-transform" />
           </Link>
@@ -136,14 +139,14 @@ const Header = () => {
         </nav>
 
         {/* User Workspace */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 md:gap-3">
           {user ? (
-            <div className="flex items-center gap-3 p-1 rounded-2xl border border-border-main/10 bg-surface/20">
-              <Link to={`/profile/${user._id}`} className="flex items-center gap-3 pl-1 pr-4 py-1 rounded-xl transition-all hover:bg-accent/5 group">
+            <div className="flex items-center gap-1.5 md:gap-3 p-1 rounded-2xl border border-border-main/10 bg-surface/30">
+              <Link to={`/profile/${user._id}`} className="flex items-center gap-2 pl-1 pr-1 md:pr-4 py-1 rounded-xl transition-all hover:bg-accent/5 group">
                 <img 
                   src={user.profileImage || `https://ui-avatars.com/api/?name=${user.username}`} 
                   alt="My Profile" 
-                  className="w-9 h-9 rounded-xl object-cover border border-border-main group-hover:border-accent/40 shadow-sm"
+                  className="w-7 h-7 md:w-9 h-9 rounded-xl object-cover border border-border-main group-hover:border-accent/40 shadow-sm"
                 />
                 <div className="hidden xl:flex flex-col items-start -space-y-1">
                   <span className="text-[13px] font-black text-text-main group-hover:text-accent transition-colors">{user.username?.split(' ')[0]}</span>
@@ -152,16 +155,16 @@ const Header = () => {
               </Link>
               <button 
                 onClick={logout}
-                className="w-10 h-10 rounded-xl text-text-muted hover:text-red-500 hover:bg-red-500/5 transition-all flex items-center justify-center border-l border-border-main/10"
+                className="w-7 h-7 md:w-10 md:h-10 rounded-xl text-text-muted hover:text-red-500 hover:bg-red-500/5 transition-all flex items-center justify-center border-l border-border-main/10"
                 title="Secure logout"
               >
-                <FaSignOutAlt size={18} />
+                <FaSignOutAlt size={14} />
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
-              <Link to="/login" className="text-text-muted hover:text-text-main text-sm font-black px-4 py-2 transition-all uppercase tracking-widest">Login</Link>
-              <Link to="/register" className="bg-accent text-white px-8 py-2.5 rounded-xl text-sm font-black shadow-lg shadow-accent/20 hover:scale-105 transition-all active:scale-95">Enroll Now</Link>
+            <div className="flex items-center gap-2">
+              <Link to="/login" className="text-text-muted hover:text-text-main text-xs md:text-sm font-black px-2 md:px-4 py-2 transition-all uppercase tracking-widest">Login</Link>
+              <Link to="/register" className="bg-accent text-white px-4 md:px-8 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-black shadow-lg shadow-accent/20 hover:scale-105 transition-all active:scale-95">Enroll</Link>
             </div>
           )}
         </div>

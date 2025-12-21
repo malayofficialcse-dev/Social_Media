@@ -20,11 +20,11 @@ const Layout = () => {
     <div className="min-h-screen bg-bg-main text-text-main flex flex-col font-sans transition-colors duration-300">
       <Header />
       
-      <div className="flex flex-1 relative">
+      <div className="flex flex-1 relative w-full overflow-x-hidden">
         {showSidebars && <Sidebar />}
         
-        <main className={`flex-1 p-4 md:p-6 transition-all duration-300 ${showSidebars ? 'md:ml-64 lg:mr-80' : 'container mx-auto'}`}>
-          <div className={`${isPublicPage ? 'max-w-6xl' : 'max-w-3xl'} mx-auto min-h-[calc(100vh-200px)]`}>
+        <main className={`flex-1 transition-all duration-300 w-full ${showSidebars ? 'md:ml-64 xl:mr-80' : ''}`}>
+          <div className={`p-4 md:p-8 ${isPublicPage ? 'max-w-7xl' : 'max-w-4xl'} mx-auto min-h-[calc(100vh-200px)] w-full`}>
             <Outlet />
           </div>
         </main>
