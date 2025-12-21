@@ -1,6 +1,7 @@
 import Comment from "../Models/Comment.js";
 import Post from "../Models/Post.js";
 import Notification from "../Models/Notification.js";
+import { logAnalytics } from "../utils/analyticsHelper.js";
 
 // Create Comment
 export const createComment = async (req, res) => {
@@ -25,6 +26,11 @@ export const createComment = async (req, res) => {
         type: "comment",
         post: post._id
       });
+    }
+
+    // Log Analytics
+    if (post) {
+      await logAnalytics('post_comment', req.user._id, post.author_id, post._id, req.ip);
     }
 
     res.status(201).json(populatedComment);

@@ -3,6 +3,8 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { FaPlus, FaTimes, FaEye, FaChevronLeft, FaChevronRight, FaTrash, FaHeart, FaRegHeart } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import VerifiedBadge from './VerifiedBadge';
+import PostWidget from './PostWidget';
 
 import CreateStoryModal from './CreateStoryModal';
 
@@ -25,7 +27,10 @@ const StoryBar = () => {
   }, []);
 
   useEffect(() => {
-    fetchStories();
+    const init = async () => {
+      await fetchStories();
+    };
+    init();
   }, [fetchStories]);
 
   const handleStoryCreated = () => {
@@ -157,15 +162,20 @@ const StoryBar = () => {
             className="flex flex-col items-center min-w-[70px] cursor-pointer group"
             onClick={() => openStory(group)}
           >
-            <div className={`w-16 h-16 rounded-full p-[2px] shadow-lg transition-transform group-hover:scale-105 group-active:scale-95 ${group.user._id === user._id ? 'bg-border-main' : 'bg-gradient-to-tr from-yellow-400 via-orange-500 to-purple-600'}`}>
+            <div className={`w-16 h-16 rounded-full p-[2px] shadow-lg transition-transform group-hover:scale-105 group-active:scale-95 ${
+              group.user.isPro 
+              ? 'pro-frame-neon' 
+              : group.user._id === user._id ? 'bg-border-main' : 'bg-gradient-to-tr from-yellow-400 via-orange-500 to-purple-600'
+            }`}>
                <img 
                  src={group.user.profileImage || `https://ui-avatars.com/api/?name=${group.user.username}`} 
                  className="w-full h-full rounded-full border-2 border-surface object-cover" 
                  alt={group.user.username}
                />
             </div>
-            <span className="text-[10px] uppercase font-black mt-2 text-text-muted truncate w-16 text-center group-hover:text-text-main transition-colors">
+            <span className="text-[10px] uppercase font-black mt-2 text-text-muted truncate w-16 text-center group-hover:text-text-main transition-colors flex items-center justify-center gap-0.5">
               {group.user._id === user._id ? 'Mine' : group.user.username}
+              {group.user.isVerified && <VerifiedBadge size={8} />}
             </span>
           </div>
         ))}
@@ -261,6 +271,24 @@ const StoryBar = () => {
                     </p>
                 </div>
              )}
+
+              {/* Story Widget Overlay */}
+              {selectedStoryGroup.stories[currentStoryIndex].widget && (
+                <div className="absolute inset-x-0 bottom-24 flex items-center justify-center p-6 z-30 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+                    <div className="w-full max-w-[320px] scale-90">
+                        <PostWidget 
+                            widget={selectedStoryGroup.stories[currentStoryIndex].widget}
+                            postId={selectedStoryGroup.stories[currentStoryIndex]._id}
+                            context="story"
+                            onUpdate={(updatedStory) => {
+                                const newStories = [...selectedStoryGroup.stories];
+                                newStories[currentStoryIndex] = updatedStory;
+                                setSelectedStoryGroup({ ...selectedStoryGroup, stories: newStories });
+                            }}
+                        />
+                    </div>
+                </div>
+              )}
 
              {/* Likes List (if mine) */}
              {selectedStoryGroup.user._id === user._id && selectedStoryGroup.stories[currentStoryIndex].likes?.length > 0 && (

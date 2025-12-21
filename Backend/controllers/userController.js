@@ -3,6 +3,10 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Notification from "../Models/Notification.js";
 import { sendWelcomeEmail, sendLoginNotificationEmail } from "../utils/emailService.js";
+import { logAnalytics } from "../utils/analyticsHelper.js";
+import Analytics from "../Models/Analytics.js";
+import Post from "../Models/Post.js";
+import Comment from "../Models/Comment.js";
 
 // Generate Token
 const generateToken = (id) => {
@@ -42,6 +46,9 @@ export const registerUser = async (req, res) => {
         bio: user.bio,
         profileImage: user.profileImage,
         backgroundImage: user.backgroundImage,
+        isPro: user.isPro,
+        isVerified: user.isVerified,
+        profileTheme: user.profileTheme,
       },
       token: generateToken(user._id),
     });
@@ -79,6 +86,9 @@ export const loginUser = async (req, res) => {
         followers: user.followers,
         following: user.following,
         role: user.role,
+        isPro: user.isPro,
+        isVerified: user.isVerified,
+        profileTheme: user.profileTheme,
       }
     });
   } catch (error) {
@@ -237,6 +247,211 @@ export const getAllUsers = async (req, res) => {
     const users = await User.find({ _id: { $ne: req.user._id } })
       .select("-password");
     res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// SEED SAMPLE ANALYTICS
+export const seedSampleAnalytics = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const otherUsers = await User.find({ _id: { $ne: userId } }).limit(10);
+    const myPosts = await Post.find({ author_id: userId }).limit(5);
+    
+    if (otherUsers.length === 0) {
+      return res.status(400).json({ message: "Need other users to seed data" });
+    }
+
+    const types = ['profile_visit', 'post_like', 'post_comment', 'post_repost'];
+    const locations = [
+      { city: 'New York', country: 'United States', countryCode: 'US', lat: 40.7128, lng: -74.0060 },
+      { city: 'London', country: 'United Kingdom', countryCode: 'GB', lat: 51.5074, lng: -0.1278 },
+      { city: 'Mumbai', country: 'India', countryCode: 'IN', lat: 19.0760, lng: 72.8777 },
+      { city: 'Tokyo', country: 'Japan', countryCode: 'JP', lat: 35.6762, lng: 139.6503 },
+      { city: 'Paris', country: 'France', countryCode: 'FR', lat: 48.8566, lng: 2.3522 },
+      { city: 'Berlin', country: 'Germany', countryCode: 'DE', lat: 52.5200, lng: 13.4050 },
+      { city: 'Sydney', country: 'Australia', countryCode: 'AU', lat: -33.8688, lng: 151.2093 }
+    ];
+
+    const analyticsToCreate = [];
+    
+    // Create 30 random events for more density
+    for (let i = 0; i < 30; i++) {
+      const type = types[Math.floor(Math.random() * types.length)];
+      const visitor = otherUsers[Math.floor(Math.random() * otherUsers.length)];
+      const loc = locations[Math.floor(Math.random() * locations.length)];
+      const post = myPosts.length > 0 ? myPosts[Math.floor(Math.random() * myPosts.length)] : null;
+      
+      analyticsToCreate.push({
+        type,
+        userId: visitor._id,
+        targetUserId: userId,
+        postId: type.startsWith('post') ? post?._id : null,
+        location: loc,
+        createdAt: new Date(Date.now() - Math.floor(Math.random() * 25 * 24 * 60 * 60 * 1000))
+      });
+
+      // Update actual models for consistency
+      if (type === 'post_like' && post) {
+        if (!post.likes.includes(visitor._id)) post.likes.push(visitor._id);
+        await post.save();
+      } else if (type === 'post_repost' && post) {
+        if (!post.reposts.includes(visitor._id)) post.reposts.push(visitor._id);
+        await post.save();
+      } else if (type === 'profile_visit') {
+        const me = await User.findById(userId);
+        if (!me.followers.includes(visitor._id)) {
+           me.followers.push(visitor._id);
+           await me.save();
+           visitor.following.push(userId);
+           await visitor.save();
+        }
+      }
+    }
+
+    await Analytics.insertMany(analyticsToCreate);
+    res.json({ success: true, message: "Exhaustive analytics and social sync completed" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// LOG PROFILE VISIT
+export const logProfileVisit = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (id === req.user._id.toString()) return res.json({ success: true }); // Don't log own visits
+
+    await logAnalytics('profile_visit', req.user._id, id, null, req.ip);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// GET USER ANALYTICS
+export const getUserAnalytics = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Last 30 days data
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // Profile visits
+    const profileVisits = await Analytics.find({
+      targetUserId: userId,
+      type: 'profile_visit',
+      createdAt: { $gte: thirtyDaysAgo }
+    }).populate('userId', 'username profileImage isVerified');
+
+    // Engagements on user's posts
+    const engagements = await Analytics.find({
+      targetUserId: userId,
+      type: { $ne: 'profile_visit' },
+      createdAt: { $gte: thirtyDaysAgo }
+    });
+
+    // Interaction Locations (for heatmap)
+    // We group by countryCode and get counts + lat/lng for visualization
+    const locations = await Analytics.aggregate([
+      { $match: { targetUserId: userId, location: { $ne: null } } },
+      { $group: {
+        _id: "$location.countryCode",
+        count: { $sum: 1 },
+        country: { $first: "$location.country" },
+        lat: { $first: "$location.lat" },
+        lng: { $first: "$location.lng" }
+      }}
+    ]);
+
+    // Trending Post (based on interaction count in last 30 days)
+    const topPostAnalytics = await Analytics.aggregate([
+      { $match: { targetUserId: userId, postId: { $ne: null }, createdAt: { $gte: thirtyDaysAgo } } },
+      { $group: { _id: "$postId", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 1 }
+    ]);
+
+    let trendingPost = null;
+    if (topPostAnalytics.length > 0) {
+      const post = await Post.findById(topPostAnalytics[0]._id)
+        .populate('author_id', 'username profileImage')
+        .populate("likes", "username profileImage")
+        .populate("reposts", "username profileImage")
+        .populate({
+          path: "originalPost",
+          populate: { path: "author_id", select: "username email profileImage" }
+        });
+      
+      if (post) {
+        // Add comment info
+        const commentsCount = await Comment.countDocuments({ post_id: post._id });
+        const comments = await Comment.find({ post_id: post._id }).populate("author_id", "username profileImage");
+        const lastComments = comments.slice(-2);
+        const commentersMap = new Map();
+        comments.forEach(c => {
+          if (c.author_id) commentersMap.set(c.author_id._id.toString(), c.author_id);
+        });
+        const commenters = Array.from(commentersMap.values());
+        trendingPost = { ...post.toObject(), commentsCount, lastComments, commenters };
+      }
+    }
+
+    // Network Score Calculation (Simple formula)
+    // Base 50 + (Followers * 2) + (Engagements * 5) + (Profile Visits * 1)
+    const user = await User.findById(userId);
+    const followersCount = user.followers.length;
+    const score = Math.min(100, 30 + (followersCount * 0.5) + (engagements.length * 2) + (profileVisits.length * 0.1));
+
+    res.json({
+      success: true,
+      stats: {
+        totalViews: profileVisits.length,
+        totalEngagements: engagements.length,
+        networkScore: Math.round(score),
+        recentVisitors: profileVisits.slice(-5).map(v => v.userId).filter(u => u), // Last 5 visitors
+        locations,
+        trendingPost
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// UPGRADE TO PRO
+export const upgradeToPro = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { isPro: true, isVerified: true }, // Verification comes with Pro for now
+      { new: true }
+    ).select("-password");
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// UPDATE PROFILE THEME
+export const updateProfileTheme = async (req, res) => {
+  try {
+    const { accentColor, applied } = req.body;
+    const user = await User.findById(req.user._id);
+    
+    if (!user.isPro) {
+      return res.status(403).json({ message: "Only Pro members can customize themes" });
+    }
+
+    user.profileTheme = {
+      accentColor: accentColor || user.profileTheme.accentColor,
+      applied: applied !== undefined ? applied : user.profileTheme.applied
+    };
+
+    await user.save();
+    res.json({ success: true, user });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaHeart, FaRegHeart, FaComment, FaRetweet, FaTrash, FaEdit } from 'react-icons/fa';
-import { formatDistanceToNow } from 'date-fns';
+import formatDistanceToNow from 'date-fns/formatDistanceToNow';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import ImageLightbox from './ImageLightbox';
 import InteractionTooltip from './InteractionTooltip';
+import VerifiedBadge from './VerifiedBadge';
+import PostWidget from './PostWidget';
 
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=User&background=1e293b&color=fff&size=200';
 
@@ -31,6 +33,17 @@ const PostCard = ({ post, onDelete, onUpdate }) => {
   // Interaction lists for tooltips
   const [localLikes, setLocalLikes] = useState(post.likes || []);
   const [localReposts, setLocalReposts] = useState(post.reposts || []);
+  const [localCommenters, setLocalCommenters] = useState(post.commenters || []);
+
+  useEffect(() => {
+    if (comments.length > 0) {
+      const commentersMap = new Map();
+      comments.forEach(c => {
+        if (c.author_id) commentersMap.set(c.author_id._id.toString(), c.author_id);
+      });
+      setLocalCommenters(Array.from(commentersMap.values()));
+    }
+  }, [comments]);
 
   // Lightbox state
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -175,8 +188,9 @@ const handleDeleteComment = async (commentId) => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
-              <Link to={`/profile/${displayPost.author_id._id}`} className="font-black text-text-main hover:text-accent transition-colors truncate max-w-[150px] sm:max-w-[250px]">
+              <Link to={`/profile/${displayPost.author_id._id}`} className="font-black text-text-main hover:text-accent transition-colors truncate max-w-[150px] sm:max-w-[250px] flex items-center gap-1">
                 {displayPost.author_id.username}
+                {displayPost.author_id.isVerified && <VerifiedBadge size={12} />}
               </Link>
               <span className="w-1 h-1 rounded-full bg-border-main"></span>
               <span className="text-text-muted text-[11px] font-medium">
@@ -256,6 +270,15 @@ const handleDeleteComment = async (commentId) => {
                   )}
                 </div>
               ) : null}
+
+            {/* Content Widgets */}
+            {post.widget && (
+              <PostWidget 
+                widget={post.widget} 
+                postId={post._id} 
+                onUpdate={(updatedPost) => onUpdate && onUpdate(updatedPost)} 
+              />
+            )}
             </>
           )}
 
@@ -270,7 +293,7 @@ const handleDeleteComment = async (commentId) => {
               </button>
             </InteractionTooltip>
             
-            <InteractionTooltip users={post.commenters} title="Commented by">
+            <InteractionTooltip users={localCommenters} title="Commented by">
               <button 
                 onClick={toggleComments}
                 className={`flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all ${showComments ? 'bg-accent/10 text-accent' : 'hover:bg-accent/5 text-text-muted hover:text-accent'}`}

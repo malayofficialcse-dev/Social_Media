@@ -2,7 +2,7 @@ import { useState } from 'react';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
-import { FaImage, FaTimes, FaCrop } from 'react-icons/fa';
+import { FaImage, FaTimes, FaCrop, FaPoll, FaHourglassEnd, FaQuestion, FaPlus } from 'react-icons/fa';
 import ImageCropper from './ImageCropper';
 
 const CreatePost = ({ onPostCreated }) => {
@@ -14,6 +14,14 @@ const CreatePost = ({ onPostCreated }) => {
   const { user } = useAuth();
 
   // Cropper state
+  // Widget state
+  const [activeWidget, setActiveWidget] = useState(null); // 'poll', 'countdown', 'qa'
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [countdownDate, setCountdownDate] = useState('');
+  const [countdownLabel, setCountdownLabel] = useState('');
+  const [qaQuestion, setQaQuestion] = useState('');
+
   const [editingImageIndex, setEditingImageIndex] = useState(null);
   const [imageToCrop, setImageToCrop] = useState(null);
 
@@ -29,6 +37,24 @@ const CreatePost = ({ onPostCreated }) => {
       formData.append('images', image);
     });
 
+    if (activeWidget) {
+      let widgetData = { type: activeWidget };
+      if (activeWidget === 'poll') {
+        widgetData.poll = { 
+          question: pollQuestion || "Quick Poll", 
+          options: pollOptions.filter(o => o.trim()).map(o => ({ text: o, votes: [] })) 
+        };
+      } else if (activeWidget === 'countdown') {
+        widgetData.countdown = { 
+          targetDate: countdownDate || new Date(Date.now() + 86400000), 
+          label: countdownLabel || "Exciting Event" 
+        };
+      } else if (activeWidget === 'qa') {
+        widgetData.qa = { question: qaQuestion || "Ask me anything!" };
+      }
+      formData.append('widget', JSON.stringify(widgetData));
+    }
+
     try {
       const { data } = await api.post('/posts', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -38,6 +64,12 @@ const CreatePost = ({ onPostCreated }) => {
       setContent('');
       setImages([]);
       setIsExpanded(false);
+      setActiveWidget(null);
+      setPollOptions(['', '']);
+      setPollQuestion('');
+      setCountdownDate('');
+      setCountdownLabel('');
+      setQaQuestion('');
       toast.success("Post shared!");
     } catch (error) {
       const message = error.response?.data?.message || error.response?.data?.errors?.join(', ') || "Error creating post";
@@ -145,11 +177,93 @@ const CreatePost = ({ onPostCreated }) => {
                 </div>
               )}
 
+              {/* Widget Configuration UI */}
+              {activeWidget && (
+                <div className="mt-4 p-4 rounded-2xl bg-bg-main/50 border border-accent/20 animate-in zoom-in-95 duration-200">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-accent flex items-center gap-2">
+                       {activeWidget === 'poll' && <><FaPoll /> Configure Poll</>}
+                       {activeWidget === 'countdown' && <><FaHourglassEnd /> Setup Timer</>}
+                       {activeWidget === 'qa' && <><FaQuestion /> Create Q&A Box</>}
+                    </span>
+                    <button type="button" onClick={() => setActiveWidget(null)} className="text-text-muted hover:text-red-500 transition-colors">
+                      <FaTimes size={12} />
+                    </button>
+                  </div>
+
+                  {activeWidget === 'poll' && (
+                    <div className="space-y-3">
+                      <input 
+                        type="text" 
+                        placeholder="What's the question?"
+                        value={pollQuestion}
+                        onChange={(e) => setPollQuestion(e.target.value)}
+                        className="w-full bg-surface/50 border border-border-main p-3 rounded-xl text-sm font-bold text-text-main focus:outline-none focus:border-accent"
+                      />
+                      {pollOptions.map((opt, i) => (
+                        <div key={i} className="flex gap-2">
+                          <input 
+                            type="text" 
+                            placeholder={`Option ${i + 1}`}
+                            value={opt}
+                            onChange={(e) => {
+                              const newOpts = [...pollOptions];
+                              newOpts[i] = e.target.value;
+                              setPollOptions(newOpts);
+                            }}
+                            className="flex-1 bg-surface/30 border border-border-main p-2 rounded-xl text-xs font-medium text-text-main focus:outline-none"
+                          />
+                          {pollOptions.length > 2 && (
+                            <button type="button" onClick={() => setPollOptions(pollOptions.filter((_, idx) => idx !== i))} className="text-text-muted hover:text-red-500 p-2">
+                              <FaTimes size={10} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button 
+                        type="button" 
+                        onClick={() => setPollOptions([...pollOptions, ''])}
+                        className="w-full py-2 border border-dashed border-border-main rounded-xl text-[10px] font-black uppercase text-text-muted hover:text-accent hover:border-accent transition-all flex items-center justify-center gap-2"
+                      >
+                        <FaPlus size={10} /> Add Option
+                      </button>
+                    </div>
+                  )}
+
+                  {activeWidget === 'countdown' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input 
+                        type="datetime-local" 
+                        value={countdownDate}
+                        onChange={(e) => setCountdownDate(e.target.value)}
+                        className="w-full bg-surface/50 border border-border-main p-3 rounded-xl text-xs font-bold text-text-main focus:outline-none"
+                      />
+                      <input 
+                        type="text" 
+                        placeholder="Label (e.g., Live Launch)"
+                        value={countdownLabel}
+                        onChange={(e) => setCountdownLabel(e.target.value)}
+                        className="w-full bg-surface/50 border border-border-main p-3 rounded-xl text-xs font-bold text-text-main focus:outline-none"
+                      />
+                    </div>
+                  )}
+
+                  {activeWidget === 'qa' && (
+                    <input 
+                      type="text" 
+                      placeholder="What do you want people to ask or answer?"
+                      value={qaQuestion}
+                      onChange={(e) => setQaQuestion(e.target.value)}
+                      className="w-full bg-surface/50 border border-border-main p-3 rounded-xl text-sm font-bold text-text-main focus:outline-none focus:border-accent"
+                    />
+                  )}
+                </div>
+              )}
+
               <div className="flex justify-between items-center mt-2 border-t border-border-main pt-4">
                 <div className="flex gap-2">
-                  <label className="cursor-pointer text-text-muted hover:text-accent p-2 rounded-full hover:bg-accent/10 transition-all flex items-center gap-2 text-sm font-medium">
+                  <label className="cursor-pointer text-text-muted hover:text-accent p-2 rounded-full hover:bg-accent/10 transition-all flex items-center gap-2 text-sm font-medium" title="Add Images">
                     <FaImage size={20} />
-                    <span className="hidden sm:inline">Photo</span>
                     <input 
                       type="file" 
                       accept="image/*" 
@@ -158,6 +272,20 @@ const CreatePost = ({ onPostCreated }) => {
                       className="hidden" 
                     />
                   </label>
+                  
+                  {!activeWidget && (
+                    <div className="flex gap-1 border-l border-border-main ml-1 pl-1">
+                      <button type="button" onClick={() => setActiveWidget('poll')} className="p-2 text-text-muted hover:text-accent hover:bg-accent/10 rounded-full transition-all" title="Add Poll">
+                        <FaPoll size={18} />
+                      </button>
+                      <button type="button" onClick={() => setActiveWidget('countdown')} className="p-2 text-text-muted hover:text-amber-500 hover:bg-amber-500/10 rounded-full transition-all" title="Add Timer">
+                        <FaHourglassEnd size={18} />
+                      </button>
+                      <button type="button" onClick={() => setActiveWidget('qa')} className="p-2 text-text-muted hover:text-purple-500 hover:bg-purple-500/10 rounded-full transition-all" title="Add Q&A">
+                        <FaQuestion size={18} />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-3">
                   <button 

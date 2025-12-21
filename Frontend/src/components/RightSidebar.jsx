@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import VerifiedBadge from './VerifiedBadge';
 
 const RightSidebar = () => {
   const [users, setUsers] = useState([]);
@@ -75,7 +76,10 @@ const RightSidebar = () => {
                     <div className="absolute inset-0 rounded-full bg-accent/10 opacity-0 group-hover/item:opacity-100 transition-opacity"></div>
                   </div>
                   <div className="overflow-hidden">
-                    <p className="font-bold text-text-main text-sm truncate w-24">{u.username}</p>
+                    <p className="font-bold text-text-main text-sm truncate w-24 flex items-center gap-1">
+                      {u.username}
+                      {u.isVerified && <VerifiedBadge size={10} />}
+                    </p>
                     <p className="text-[10px] text-text-muted font-medium">Community Member</p>
                   </div>
                 </Link>

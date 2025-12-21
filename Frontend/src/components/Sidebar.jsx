@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import VerifiedBadge from './VerifiedBadge';
 
 const Sidebar = () => {
   const { user } = useAuth();
@@ -52,7 +53,10 @@ const Sidebar = () => {
             )}
           </div>
           <Link to={`/profile/${displayUser._id}`} className="block group/link">
-            <h2 className="text-xl font-bold text-text-main leading-tight group-hover/link:text-accent transition-colors">{displayUser.username}</h2>
+            <h2 className="text-xl font-bold text-text-main leading-tight group-hover/link:text-accent transition-colors flex items-center justify-center gap-1.5">
+              {displayUser.username}
+              {displayUser.isVerified && <VerifiedBadge size={16} />}
+            </h2>
           </Link>
           <p className="text-xs text-text-muted mt-2 line-clamp-2 px-2 font-medium leading-relaxed">
             {displayUser.bio || "Sharing my journey on P Connect"}

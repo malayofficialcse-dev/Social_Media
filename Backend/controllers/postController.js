@@ -1,19 +1,20 @@
 import Post from "../Models/Post.js";
 import Notification from "../Models/Notification.js";
 import Comment from "../Models/Comment.js";
+import { logAnalytics } from "../utils/analyticsHelper.js";
 
 // Create Post
 export const createPost = async (req, res) => {
   try {
-    const { title, content } = req.body;
+    const { title, content, widget } = req.body;
     const images = req.files ? req.files.map(file => file.path) : [];
 
-    req.body.author_id = req.user._id;
     const post = await Post.create({
       title,
       content,
       images,
-      author_id: req.user._id
+      author_id: req.user._id,
+      widget: widget ? (typeof widget === 'string' ? JSON.parse(widget) : widget) : undefined
     });
     const populatedPost = await Post.findById(post._id)
       .populate("author_id", "username email profileImage");
@@ -68,9 +69,26 @@ export const getPost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id)
       .populate("author_id", "username email profileImage")
-      .populate("originalPost");
+      .populate("likes", "username profileImage")
+      .populate("reposts", "username profileImage")
+      .populate({
+        path: "originalPost",
+        populate: { path: "author_id", select: "username email profileImage" }
+      });
+
     if (!post) return res.status(404).json({ message: "Post not found" });
-    res.json(post);
+
+    // Add comment info
+    const commentsCount = await Comment.countDocuments({ post_id: post._id });
+    const comments = await Comment.find({ post_id: post._id }).populate("author_id", "username profileImage");
+    const lastComments = comments.slice(-2);
+    const commentersMap = new Map();
+    comments.forEach(c => {
+      if (c.author_id) commentersMap.set(c.author_id._id.toString(), c.author_id);
+    });
+    const commenters = Array.from(commentersMap.values());
+
+    res.json({ ...post.toObject(), commentsCount, lastComments, commenters });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -151,10 +169,17 @@ export const likePost = async (req, res) => {
       });
     }
 
-    const updatedPost = await Post.findById(post._id)
-      .populate("author_id", "username email profileImage");
+    // Log Analytics
+    await logAnalytics('post_like', req.user._id, post.author_id, post._id, req.ip);
 
-    res.json(updatedPost);
+    // Return populated post for frontend update
+    const updatedPost = await Post.findById(post._id)
+      .populate("author_id", "username email profileImage")
+      .populate("likes", "username profileImage")
+      .populate("reposts", "username profileImage");
+    
+    // Minimal comments info for response
+    res.json({ success: true, post: updatedPost });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -178,9 +203,11 @@ export const unlikePost = async (req, res) => {
     await post.save();
 
     const updatedPost = await Post.findById(post._id)
-      .populate("author_id", "username email profileImage");
+      .populate("author_id", "username email profileImage")
+      .populate("likes", "username profileImage")
+      .populate("reposts", "username profileImage");
 
-    res.json(updatedPost);
+    res.json({ success: true, post: updatedPost });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -224,8 +251,13 @@ export const repostPost = async (req, res) => {
       });
     }
 
+    // Log Analytics
+    await logAnalytics('post_repost', req.user._id, originalPost.author_id, originalPost._id, req.ip);
+
     const populatedRepost = await Post.findById(repost._id)
       .populate("author_id", "username email profileImage")
+      .populate("likes", "username profileImage")
+      .populate("reposts", "username profileImage")
       .populate({
         path: "originalPost",
         populate: {
@@ -276,5 +308,64 @@ export const getUserPosts = async (req, res) => {
     res.json(postsWithCounts);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+// VOTE IN POLL
+export const votePoll = async (req, res) => {
+  try {
+    const { optionIndex } = req.body;
+    const { id } = req.params;
+    const post = await Post.findById(id);
+    
+    if (!post || !post.widget || post.widget.type !== 'poll') {
+      return res.status(404).json({ message: "Poll not found" });
+    }
+
+    // Check if user already voted in ANY option
+    const hasVoted = post.widget.poll.options.some(opt => opt.votes.includes(req.user._id));
+    if (hasVoted) {
+      return res.status(400).json({ message: "You have already voted" });
+    }
+
+    post.widget.poll.options[optionIndex].votes.push(req.user._id);
+    await post.save();
+
+    // Log engagement
+    await logAnalytics('poll_vote', req.user._id, post.author_id, post._id, req.ip);
+
+    res.json({ success: true, post });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ANSWER Q&A
+export const answerQA = async (req, res) => {
+  try {
+    const { text } = req.body;
+    const { id } = req.params;
+    const post = await Post.findById(id);
+
+    if (!post || !post.widget || post.widget.type !== 'qa') {
+      return res.status(404).json({ message: "Q&A box not found" });
+    }
+
+    post.widget.qa.answers.push({
+      user: req.user._id,
+      text
+    });
+
+    await post.save();
+    
+    // Log engagement
+    await logAnalytics('qa_answer', req.user._id, post.author_id, post._id, req.ip);
+    
+    const populatedPost = await Post.findById(id)
+      .populate("widget.qa.answers.user", "username profileImage");
+
+    res.json({ success: true, post: populatedPost });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

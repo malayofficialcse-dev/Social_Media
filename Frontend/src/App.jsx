@@ -14,6 +14,7 @@ import Chat from './pages/Chat';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import AdminDashboard from './pages/AdminDashboard';
+import Analytics from './pages/Analytics';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -61,6 +62,7 @@ function App() {
                   <Route path="profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                   <Route path="notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
                   <Route path="chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+                  <Route path="analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
                   <Route path="admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
                 </Route>
               </Routes>

@@ -2,6 +2,7 @@ import asyncHandler from "express-async-handler";
 import Story from "../Models/Story.js";
 import User from "../Models/User.js";
 import Notification from "../Models/Notification.js";
+import { logAnalytics } from "../utils/analyticsHelper.js";
 
 // @desc    Create a new story
 // @route   POST /api/stories
@@ -88,7 +89,7 @@ export const createStory = asyncHandler(async (req, res) => {
     throw new Error("No media file uploaded");
   }
 
-  const { type, textContent, audioStart, audioDuration } = req.body; 
+  const { type, textContent, audioStart, audioDuration, widget } = req.body; 
   
   // Enforce 30s max duration logic if needed here, but stored as info
   const finalDuration = audioDuration ? Math.min(Number(audioDuration), 30) : 5;
@@ -102,6 +103,7 @@ export const createStory = asyncHandler(async (req, res) => {
     audioStart: Number(audioStart) || 0,
     audioDuration: finalDuration,
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), 
+    widget: widget ? (typeof widget === 'string' ? JSON.parse(widget) : widget) : undefined,
   });
 
   const fullStory = await Story.findById(story._id).populate("user", "username profileImage");
@@ -197,4 +199,55 @@ export const deleteStory = asyncHandler(async (req, res) => {
 
   await Story.deleteOne({ _id: story._id });
   res.json({ message: "Story removed" });
+});
+
+// VOTE IN STORY POLL
+export const voteStoryPoll = asyncHandler(async (req, res) => {
+  const { optionIndex } = req.body;
+  const story = await Story.findById(req.params.id);
+  
+  if (!story || !story.widget || story.widget.type !== 'poll') {
+    res.status(404);
+    throw new Error("Poll not found");
+  }
+
+  const hasVoted = story.widget.poll.options.some(opt => opt.votes.includes(req.user._id));
+  if (hasVoted) {
+    res.status(400);
+    throw new Error("Already voted");
+  }
+
+  story.widget.poll.options[optionIndex].votes.push(req.user._id);
+  await story.save();
+
+  // Log engagement
+  await logAnalytics('poll_vote', req.user._id, story.user, null, req.ip);
+
+  res.json({ success: true, story });
+});
+
+// ANSWER STORY Q&A
+export const answerStoryQA = asyncHandler(async (req, res) => {
+  const { text } = req.body;
+  const story = await Story.findById(req.params.id);
+
+  if (!story || !story.widget || story.widget.type !== 'qa') {
+    res.status(404);
+    throw new Error("Q&A box not found");
+  }
+
+  story.widget.qa.answers.push({
+    user: req.user._id,
+    text
+  });
+
+  await story.save();
+  
+  // Log engagement
+  await logAnalytics('qa_answer', req.user._id, story.user, null, req.ip);
+  
+  const populatedStory = await Story.findById(req.params.id)
+    .populate("widget.qa.answers.user", "username profileImage");
+
+  res.json({ success: true, story: populatedStory });
 });

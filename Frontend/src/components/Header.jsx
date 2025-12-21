@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { FaUser, FaSignOutAlt, FaHome, FaInfoCircle, FaSearch, FaBars, FaBell, FaPaperPlane, FaSun, FaMoon, FaUsers, FaTimes } from 'react-icons/fa';
+import { FaChartLine,FaUser, FaSignOutAlt, FaHome, FaInfoCircle, FaSearch, FaBars, FaBell, FaPaperPlane, FaSun, FaMoon, FaUsers, FaTimes, FaShieldAlt } from 'react-icons/fa';
+import VerifiedBadge from './VerifiedBadge';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
@@ -100,7 +101,10 @@ const Header = () => {
                       <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-surface rounded-full"></div>
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-text-main leading-tight group-hover/item:text-accent transition-colors">{result.username}</p>
+                      <p className="text-sm font-bold text-text-main leading-tight group-hover/item:text-accent transition-colors flex items-center gap-1">
+                        {result.username}
+                        {result.isVerified && <VerifiedBadge size={10} />}
+                      </p>
                       <p className="text-[11px] text-text-muted truncate max-w-[250px] font-medium">{result.bio || "Platform Creator"}</p>
                     </div>
                   </Link>
@@ -126,7 +130,15 @@ const Header = () => {
           <Link to="/chat" title="Messages" className="p-3 rounded-xl text-text-muted hover:text-accent hover:bg-accent/5 transition-all group">
             <FaPaperPlane size={20} className="group-hover:scale-110 transition-transform" />
           </Link>
-          <Link to="/about" title="About" className="p-3 rounded-xl text-text-muted hover:text-accent hover:bg-accent/5 transition-all group border-l border-border-main/20 ml-1">
+          <Link to="/analytics" title="Network Insights" className="p-3 rounded-xl text-text-muted hover:text-accent hover:bg-accent/5 transition-all group">
+            <FaChartLine size={20} className="group-hover:scale-110 transition-transform" />
+          </Link>
+          {user?.role === 'admin' && (
+            <Link to="/admin" title="Admin Control" className="p-3 rounded-xl text-purple-500 hover:text-purple-600 hover:bg-purple-500/5 transition-all group border-l border-border-main/20 ml-1">
+              <FaShieldAlt size={20} className="group-hover:scale-110 transition-transform" />
+            </Link>
+          )}
+          <Link to="/about" title="About" className={`p-3 rounded-xl text-text-muted hover:text-accent hover:bg-accent/5 transition-all group ${user?.role === 'admin' ? '' : 'border-l border-border-main/20 ml-1'}`}>
             <FaInfoCircle size={21} className="group-hover:scale-110 transition-transform" />
           </Link>
           <button 
@@ -192,7 +204,10 @@ const Header = () => {
                    {searchResults.slice(0, 5).map(result => (
                       <Link key={result._id} to={`/profile/${result._id}`} onClick={() => setIsMenuOpen(false)} className="flex items-center gap-4 p-2 rounded-xl border border-transparent hover:bg-accent/5">
                          <img src={result.profileImage || `https://ui-avatars.com/api/?name=${result.username}`} className="w-10 h-10 rounded-full border border-border-main" />
-                         <span className="font-bold text-sm text-text-main">{result.username}</span>
+                         <span className="font-bold text-sm text-text-main flex items-center gap-1">
+                           {result.username}
+                           {result.isVerified && <VerifiedBadge size={10} />}
+                         </span>
                       </Link>
                    ))}
                 </div>
@@ -207,6 +222,10 @@ const Header = () => {
               <button onClick={() => handleMobileNav('/chat')} className="flex flex-col items-center justify-center gap-2 p-6 rounded-3xl bg-surface/40 border border-border-main hover:border-accent/30 transition-all group">
                 <FaPaperPlane className="text-accent group-hover:scale-110 transition-transform" size={22} /> 
                 <span className="font-black text-[11px] uppercase tracking-widest text-text-main">Messages</span>
+              </button>
+              <button onClick={() => handleMobileNav('/analytics')} className="flex flex-col items-center justify-center gap-2 p-6 rounded-3xl bg-surface/40 border border-border-main hover:border-accent/30 transition-all group">
+                <FaChartLine className="text-accent group-hover:scale-110 transition-transform" size={22} /> 
+                <span className="font-black text-[11px] uppercase tracking-widest text-text-main">Analytics</span>
               </button>
               <button onClick={() => handleMobileNav('/notifications')} className="flex flex-col items-center justify-center gap-2 p-6 rounded-3xl bg-surface/40 border border-border-main hover:border-accent/30 transition-all group relative">
                 <FaBell className="text-accent group-hover:scale-110 transition-transform" size={22} /> 
@@ -228,8 +247,11 @@ const Header = () => {
               </button>
               
               {user?.role === 'admin' && (
-                <button onClick={() => handleMobileNav('/admin')} className="flex items-center gap-4 p-5 rounded-2xl bg-purple-500/5 border border-purple-500/20 text-purple-600 font-bold transition-all">
-                  <FaUser size={18} /> Admin Command Center
+                <button onClick={() => handleMobileNav('/admin')} className="flex items-center justify-between p-5 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-400 font-black uppercase tracking-widest text-xs transition-all hover:bg-purple-500 hover:text-white group">
+                  <div className="flex items-center gap-4">
+                    <FaShieldAlt size={18} className="group-hover:rotate-12 transition-transform" /> <span>Admin Center</span>
+                  </div>
+                  <div className="px-2 py-0.5 bg-purple-500/20 rounded text-[8px]">ROOT</div>
                 </button>
               )}
 
