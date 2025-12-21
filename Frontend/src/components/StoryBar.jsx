@@ -136,36 +136,36 @@ const StoryBar = () => {
   }, [selectedStoryGroup, currentStoryIndex, nextStory]);
 
   return (
-    <div className="w-full bg-slate-800 p-4 rounded-lg mb-6 overflow-x-auto scrollbar-hide">
+    <div className="w-full bg-surface border border-border-main p-4 rounded-3xl mb-6 overflow-x-auto scrollbar-hide shadow-sm hover:shadow-md transition-shadow">
       <div className="flex gap-4">
         {/* Add Story Button */}
         <div className="flex flex-col items-center min-w-[70px]">
           <div 
-            className="w-16 h-16 rounded-full border-2 border-dashed border-slate-500 flex items-center justify-center cursor-pointer hover:border-accent transition-colors relative"
+            className="w-16 h-16 rounded-full border-2 border-dashed border-border-main flex items-center justify-center cursor-pointer hover:border-accent group transition-all hover:scale-105 active:scale-95 relative"
             onClick={() => setShowCreateModal(true)}
           >
-             <FaPlus className="text-slate-400" />
-             <img src={user?.profileImage || `https://ui-avatars.com/api/?name=${user?.username}`} className="absolute inset-0 w-full h-full rounded-full opacity-30 object-cover -z-10" alt="Me" />
+             <FaPlus className="text-text-muted group-hover:text-accent transition-colors" />
+             <img src={user?.profileImage || `https://ui-avatars.com/api/?name=${user?.username}`} className="absolute inset-0 w-full h-full rounded-full opacity-10 object-cover -z-10" alt="Me" />
           </div>
-          <span className="text-xs mt-2 text-slate-300">Add Story</span>
+          <span className="text-[10px] uppercase tracking-wider font-black mt-2 text-text-muted">Add Story</span>
         </div>
 
         {/* Story Circles */}
         {stories.map((group, idx) => (
           <div 
             key={idx} 
-            className="flex flex-col items-center min-w-[70px] cursor-pointer"
+            className="flex flex-col items-center min-w-[70px] cursor-pointer group"
             onClick={() => openStory(group)}
           >
-            <div className={`w-16 h-16 rounded-full p-[2px] ${group.user._id === user._id ? 'bg-slate-500' : 'bg-gradient-to-tr from-yellow-400 to-purple-600'}`}>
+            <div className={`w-16 h-16 rounded-full p-[2px] shadow-lg transition-transform group-hover:scale-105 group-active:scale-95 ${group.user._id === user._id ? 'bg-border-main' : 'bg-gradient-to-tr from-yellow-400 via-orange-500 to-purple-600'}`}>
                <img 
                  src={group.user.profileImage || `https://ui-avatars.com/api/?name=${group.user.username}`} 
-                 className="w-full h-full rounded-full border-2 border-slate-800 object-cover" 
+                 className="w-full h-full rounded-full border-2 border-surface object-cover" 
                  alt={group.user.username}
                />
             </div>
-            <span className="text-xs mt-2 text-slate-300 truncate w-16 text-center">
-              {group.user._id === user._id ? 'Your Story' : group.user.username}
+            <span className="text-[10px] uppercase font-black mt-2 text-text-muted truncate w-16 text-center group-hover:text-text-main transition-colors">
+              {group.user._id === user._id ? 'Mine' : group.user.username}
             </span>
           </div>
         ))}

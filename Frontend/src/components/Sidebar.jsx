@@ -38,50 +38,50 @@ const Sidebar = () => {
           className="h-24 bg-cover bg-center relative transition-transform duration-500 group-hover:scale-105"
           style={{ backgroundImage: `url(${displayUser.backgroundImage || 'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=400'})` }}
         >
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-transparent to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent"></div>
         </div>
         <div className="px-4 pb-6 text-center relative">
           <div className="relative -mt-12 mb-4 inline-block">
             <img 
               src={displayUser.profileImage || "https://via.placeholder.com/96"} 
               alt="Profile" 
-              className="w-24 h-24 rounded-full border-4 border-[#0f172a] object-cover shadow-2xl transition-transform hover:scale-105"
+              className="w-24 h-24 rounded-full border-4 border-card object-cover shadow-2xl transition-transform hover:scale-105"
             />
             {isUserOnline(displayUser._id) && (
-              <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 border-4 border-[#0f172a] rounded-full shadow-lg"></div>
+              <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 border-4 border-card rounded-full shadow-lg"></div>
             )}
           </div>
           <Link to={`/profile/${displayUser._id}`} className="block group/link">
-            <h2 className="text-xl font-bold text-white leading-tight group-hover/link:text-accent transition-colors">{displayUser.username}</h2>
+            <h2 className="text-xl font-bold text-text-main leading-tight group-hover/link:text-accent transition-colors">{displayUser.username}</h2>
           </Link>
-          <p className="text-xs text-slate-400 mt-2 line-clamp-2 px-2 font-medium leading-relaxed">
+          <p className="text-xs text-text-muted mt-2 line-clamp-2 px-2 font-medium leading-relaxed">
             {displayUser.bio || "Sharing my journey on P Connect"}
           </p>
         </div>
 
         {/* Stats */}
-        <div className="flex border-t border-white/5 divide-x divide-white/5 bg-white/5">
+        <div className="flex border-t border-border-main divide-x divide-border-main bg-bg-main/50">
           <div 
-            className="flex-1 p-4 text-center hover:bg-white/5 cursor-pointer transition-all relative group/stat"
+            className="flex-1 p-4 text-center hover:bg-bg-main cursor-pointer transition-all relative group/stat"
             onMouseEnter={() => setShowFollowers(true)}
             onMouseLeave={() => setShowFollowers(false)}
           >
-            <span className="font-black block text-white text-lg">{followers.length}</span>
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Followers</span>
+            <span className="font-black block text-text-main text-lg">{followers.length}</span>
+            <span className="text-[10px] uppercase tracking-wider text-text-muted font-bold">Followers</span>
             
             {showFollowers && (
               <div className="absolute top-0 left-full ml-4 w-64 glass rounded-2xl shadow-2xl z-50 p-2 animate-in fade-in slide-in-from-left-2 duration-200">
-                <div className="p-2 border-b border-white/5 mb-1">
+                <div className="p-2 border-b border-border-main mb-1">
                   <h3 className="text-xs font-black uppercase text-accent">Followers</h3>
                 </div>
                 <div className="max-h-60 overflow-y-auto space-y-1">
                   {followers.length > 0 ? followers.map(f => (
-                    <Link to={`/profile/${f._id}`} key={f._id} className="flex items-center gap-3 p-2 hover:bg-white/10 rounded-xl transition-all">
-                      <img src={f.profileImage || "https://via.placeholder.com/32"} className="w-8 h-8 rounded-full object-cover border border-white/10" alt={f.username} />
-                      <span className="text-sm font-semibold text-slate-300 truncate">{f.username}</span>
+                    <Link to={`/profile/${f._id}`} key={f._id} className="flex items-center gap-3 p-2 hover:bg-accent/5 rounded-xl transition-all">
+                      <img src={f.profileImage || "https://via.placeholder.com/32"} className="w-8 h-8 rounded-full object-cover border border-border-main" alt={f.username} />
+                      <span className="text-sm font-semibold text-text-muted truncate">{f.username}</span>
                     </Link>
                   )) : (
-                    <p className="text-xs text-slate-500 p-4 text-center italic">No followers yet</p>
+                    <p className="text-xs text-text-muted p-4 text-center italic">No followers yet</p>
                   )}
                 </div>
               </div>
@@ -89,26 +89,26 @@ const Sidebar = () => {
           </div>
 
           <div 
-            className="flex-1 p-4 text-center hover:bg-white/5 cursor-pointer transition-all relative group/stat"
+            className="flex-1 p-4 text-center hover:bg-bg-main cursor-pointer transition-all relative group/stat"
             onMouseEnter={() => setShowFollowing(true)}
             onMouseLeave={() => setShowFollowing(false)}
           >
-            <span className="font-black block text-white text-lg">{following.length}</span>
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Following</span>
+            <span className="font-black block text-text-main text-lg">{following.length}</span>
+            <span className="text-[10px] uppercase tracking-wider text-text-muted font-bold">Following</span>
 
             {showFollowing && (
               <div className="absolute top-0 left-full ml-4 w-64 glass rounded-2xl shadow-2xl z-50 p-2 animate-in fade-in slide-in-from-left-2 duration-200">
-                <div className="p-2 border-b border-white/5 mb-1">
+                <div className="p-2 border-b border-border-main mb-1">
                   <h3 className="text-xs font-black uppercase text-accent">Following</h3>
                 </div>
                 <div className="max-h-60 overflow-y-auto space-y-1">
                   {following.length > 0 ? following.map(f => (
-                    <Link to={`/profile/${f._id}`} key={f._id} className="flex items-center gap-3 p-2 hover:bg-white/10 rounded-xl transition-all">
-                      <img src={f.profileImage || "https://via.placeholder.com/32"} className="w-8 h-8 rounded-full object-cover border border-white/10" alt={f.username} />
-                      <span className="text-sm font-semibold text-slate-300 truncate">{f.username}</span>
+                    <Link to={`/profile/${f._id}`} key={f._id} className="flex items-center gap-3 p-2 hover:bg-accent/5 rounded-xl transition-all">
+                      <img src={f.profileImage || "https://via.placeholder.com/32"} className="w-8 h-8 rounded-full object-cover border border-border-main" alt={f.username} />
+                      <span className="text-sm font-semibold text-text-muted truncate">{f.username}</span>
                     </Link>
                   )) : (
-                    <p className="text-xs text-slate-500 p-4 text-center italic">Not following anyone</p>
+                    <p className="text-xs text-text-muted p-4 text-center italic">Not following anyone</p>
                   )}
                 </div>
               </div>

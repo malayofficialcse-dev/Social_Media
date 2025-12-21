@@ -1,13 +1,15 @@
 import { Link } from 'react-router-dom';
-import { FaUser, FaSignOutAlt, FaHome, FaInfoCircle, FaEnvelope, FaSearch, FaBars, FaBell, FaPaperPlane } from 'react-icons/fa';
+import { FaUser, FaSignOutAlt, FaHome, FaInfoCircle, FaEnvelope, FaSearch, FaBars, FaBell, FaPaperPlane, FaSun, FaMoon } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import { useTheme } from '../context/ThemeContext';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 
 const Header = () => {
   const { user, logout } = useAuth();
   const { unreadCount } = useNotifications();
+  const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
@@ -56,7 +58,7 @@ const Header = () => {
           </div>
           <input
             type="text"
-            className="block w-full pl-11 pr-4 py-2 bg-white/5 border border-white/5 rounded-2xl text-slate-200 placeholder-slate-500 focus:outline-none focus:bg-white/10 focus:border-accent/30 focus:ring-4 focus:ring-accent/5 transition-all text-sm"
+            className="block w-full pl-11 pr-4 py-2 bg-surface border border-border-main rounded-2xl text-text-main placeholder-text-muted focus:outline-none focus:bg-surface focus:border-accent/30 focus:ring-4 focus:ring-accent/5 transition-all text-sm"
             placeholder="Explore users..."
             value={searchQuery}
             onChange={(e) => {
@@ -68,12 +70,12 @@ const Header = () => {
           />
           
           {showResults && searchResults.length > 0 && (
-            <div className="absolute mt-2 w-full glass border border-white/10 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto p-2 animate-in fade-in zoom-in-95 duration-200">
+            <div className="absolute mt-2 w-full glass border border-border-main rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto p-2 animate-in fade-in zoom-in-95 duration-200">
               {searchResults.map((result) => (
                 <Link 
                   key={result._id} 
                   to={`/profile/${result._id}`}
-                  className="flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl transition-all"
+                  className="flex items-center gap-3 px-3 py-2.5 hover:bg-bg-main/50 rounded-xl transition-all"
                   onClick={() => {
                     setSearchQuery('');
                     setShowResults(false);
@@ -82,11 +84,11 @@ const Header = () => {
                   <img 
                     src={result.profileImage || "https://via.placeholder.com/40"} 
                     alt={result.username} 
-                    className="w-9 h-9 rounded-full object-cover border border-white/10"
+                    className="w-9 h-9 rounded-full object-cover border border-border-main"
                   />
                   <div>
-                    <p className="text-sm font-semibold text-white leading-tight">{result.username}</p>
-                    <p className="text-[11px] text-slate-400 truncate max-w-[200px]">{result.bio || "Active member"}</p>
+                    <p className="text-sm font-semibold text-text-main leading-tight">{result.username}</p>
+                    <p className="text-[11px] text-text-muted truncate max-w-[200px]">{result.bio || "Active member"}</p>
                   </div>
                 </Link>
               ))}
@@ -96,46 +98,53 @@ const Header = () => {
 
         {/* Desktop Nav */}
         <nav className="hidden lg:flex items-center gap-2">
-          <Link to="/" title="Home" className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+          <Link to="/" title="Home" className="p-2.5 rounded-xl text-text-muted hover:text-text-main hover:bg-accent/5 transition-all">
             <FaHome size={22} />
           </Link>
-          <Link to="/notifications" title="Notifications" className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all relative">
+          <Link to="/notifications" title="Notifications" className="p-2.5 rounded-xl text-text-muted hover:text-text-main hover:bg-accent/5 transition-all relative">
             <FaBell size={21} />
             {unreadCount > 0 && (
-              <span className="absolute top-2 right-2 bg-red-500 text-white text-[9px] font-black rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border-2 border-slate-900">
+              <span className="absolute top-2 right-2 bg-red-500 text-white text-[9px] font-black rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border-2 border-surface">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </Link>
-          <Link to="/chat" title="Messages" className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+          <Link to="/chat" title="Messages" className="p-2.5 rounded-xl text-text-muted hover:text-text-main hover:bg-accent/5 transition-all">
             <FaPaperPlane size={20} />
           </Link>
-          <Link to="/about" title="About" className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+          <Link to="/about" title="About" className="p-2.5 rounded-xl text-text-muted hover:text-text-main hover:bg-accent/5 transition-all">
             <FaInfoCircle size={21} />
           </Link>
           {user?.role === 'admin' && (
-            <Link to="/admin" title="Admin" className="p-2.5 rounded-xl text-slate-400 hover:text-accent hover:bg-accent/5 transition-all">
+            <Link to="/admin" title="Admin" className="p-2.5 rounded-xl text-text-muted hover:text-accent hover:bg-accent/5 transition-all">
               <FaUser size={20} />
             </Link>
           )}
+          <button 
+            onClick={toggleTheme}
+            className="p-2.5 rounded-xl text-text-muted hover:text-accent hover:bg-accent/5 transition-all"
+            title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          >
+            {theme === 'dark' ? <FaSun size={20} /> : <FaMoon size={20} />}
+          </button>
         </nav>
 
         {/* User Profile / Auth */}
         <div className="flex items-center gap-2 md:gap-4 ml-2">
           {user ? (
             <>
-              <div className="h-8 w-[1px] bg-white/10 mx-1 hidden md:block"></div>
-              <Link to={`/profile/${user._id}`} className="flex items-center gap-3 p-1.5 pl-1.5 pr-4 rounded-full hover:bg-white/5 transition-all border border-transparent hover:border-white/5">
+              <div className="h-8 w-[1px] bg-border-main mx-1 hidden md:block"></div>
+              <Link to={`/profile/${user._id}`} className="flex items-center gap-3 p-1.5 pl-1.5 pr-4 rounded-full hover:bg-bg-main/50 transition-all border border-transparent hover:border-border-main">
                 <img 
                   src={user.profileImage || "https://via.placeholder.com/32"} 
                   alt="Profile" 
-                  className="w-8 h-8 rounded-full object-cover border-2 border-white/10 shadow-sm"
+                  className="w-8 h-8 rounded-full object-cover border-2 border-border-main shadow-sm"
                 />
-                <span className="text-sm font-semibold text-slate-200 hidden xl:block">{user.username?.split(' ')[0]}</span>
+                <span className="text-sm font-semibold text-text-main hidden xl:block">{user.username?.split(' ')[0]}</span>
               </Link>
               <button 
                 onClick={logout}
-                className="p-2.5 rounded-xl text-slate-500 hover:text-red-400 hover:bg-red-400/5 transition-all"
+                className="p-2.5 rounded-xl text-text-muted hover:text-red-500 hover:bg-red-500/5 transition-all"
                 title="Logout"
               >
                 <FaSignOutAlt size={18} />

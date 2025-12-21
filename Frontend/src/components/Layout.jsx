@@ -1,12 +1,15 @@
 import { Outlet, useLocation } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
 import Sidebar from './Sidebar';
 import RightSidebar from './RightSidebar';
 import Header from './Header';
 import Footer from './Footer';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const Layout = () => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const location = useLocation();
   
   // Pages that don't need the dashboard sidebars
@@ -14,7 +17,7 @@ const Layout = () => {
   const showSidebars = user && !isPublicPage;
 
   return (
-    <div className="min-h-screen bg-dark text-slate-200 flex flex-col font-sans">
+    <div className="min-h-screen bg-bg-main text-text-main flex flex-col font-sans transition-colors duration-300">
       <Header />
       
       <div className="flex flex-1 relative">
@@ -30,6 +33,7 @@ const Layout = () => {
       </div>
 
       <Footer />
+      <ToastContainer theme={theme} position="bottom-right" />
     </div>
   );
 };

@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -40,33 +39,36 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
+import { ThemeProvider } from './context/ThemeContext';
+
 function App() {
   return (
-    <AuthProvider>
-      <NotificationProvider>
-        <SocketProvider>
-          <Router>
-            <Routes>
-              <Route path="/" element={<Layout />}>
-                {/* Public Routes */}
-                <Route path="login" element={<PublicRoute><Login /></PublicRoute>} />
-                <Route path="register" element={<PublicRoute><Register /></PublicRoute>} />
-                <Route path="about" element={<About />} />
-                <Route path="contact" element={<Contact />} />
+    <ThemeProvider>
+      <AuthProvider>
+        <NotificationProvider>
+          <SocketProvider>
+            <Router>
+              <Routes>
+                <Route path="/" element={<Layout />}>
+                  {/* Public Routes */}
+                  <Route path="login" element={<PublicRoute><Login /></PublicRoute>} />
+                  <Route path="register" element={<PublicRoute><Register /></PublicRoute>} />
+                  <Route path="about" element={<About />} />
+                  <Route path="contact" element={<Contact />} />
 
-                {/* Protected Routes */}
-                <Route index element={<ProtectedRoute><Home /></ProtectedRoute>} />
-                <Route path="profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                <Route path="notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                <Route path="chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-                <Route path="admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-              </Route>
-            </Routes>
-            <ToastContainer theme="dark" position="bottom-right" />
-          </Router>
-        </SocketProvider>
-      </NotificationProvider>
-    </AuthProvider>
+                  {/* Protected Routes */}
+                  <Route index element={<ProtectedRoute><Home /></ProtectedRoute>} />
+                  <Route path="profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                  <Route path="notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                  <Route path="chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+                  <Route path="admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+                </Route>
+              </Routes>
+            </Router>
+          </SocketProvider>
+        </NotificationProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

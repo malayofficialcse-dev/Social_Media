@@ -85,14 +85,14 @@ const CreatePost = ({ onPostCreated }) => {
         <img 
           src={user?.profileImage || "https://via.placeholder.com/40"} 
           alt="Profile" 
-          className="w-11 h-11 rounded-full object-cover border-2 border-slate-800 shadow-inner shrink-0"
+          className="w-11 h-11 rounded-full object-cover border-2 border-border-main shadow-inner shrink-0"
           onError={(e) => { e.target.src = "https://via.placeholder.com/40"; }}
         />
         <div className="flex-1">
           {!isExpanded ? (
             <div 
               onClick={() => setIsExpanded(true)}
-              className="bg-slate-800/50 hover:bg-slate-800 text-slate-400 px-5 py-2.5 rounded-full cursor-pointer transition-all border border-slate-700/50 flex items-center"
+              className="bg-bg-main hover:bg-bg-main/80 text-text-muted px-5 py-2.5 rounded-full cursor-pointer transition-all border border-border-main flex items-center"
             >
               What's on your mind, {user?.username?.split(' ')[0]}?
             </div>
@@ -103,20 +103,20 @@ const CreatePost = ({ onPostCreated }) => {
                 placeholder="Post Title (Optional)"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-transparent text-white border-b border-slate-800 p-2 mb-3 focus:outline-none focus:border-accent transition-colors"
+                className="w-full bg-transparent text-text-main border-b border-border-main p-2 mb-3 focus:outline-none focus:border-accent transition-colors"
                 autoFocus
               />
               <textarea
                 placeholder="Share your thoughts..."
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                className="w-full bg-transparent text-white text-lg resize-none focus:outline-none min-h-[120px]"
+                className="w-full bg-transparent text-text-main text-lg resize-none focus:outline-none min-h-[120px]"
               />
               
               {images.length > 0 && (
                 <div className="grid grid-cols-2 gap-2 mt-4 pb-4">
                   {images.map((img, index) => (
-                    <div key={index} className="relative group rounded-xl overflow-hidden border border-slate-800">
+                    <div key={index} className="relative group rounded-xl overflow-hidden border border-border-main">
                       <img 
                         src={URL.createObjectURL(img)} 
                         alt={`Preview ${index}`} 
@@ -126,7 +126,7 @@ const CreatePost = ({ onPostCreated }) => {
                         <button 
                           type="button" 
                           onClick={() => startEditing(index)}
-                          className="bg-black/60 backdrop-blur-md text-white rounded-full p-2 hover:bg-accent transition-colors"
+                          className="bg-surface/80 backdrop-blur-md text-text-main rounded-full p-2 hover:bg-accent transition-colors"
                           title="Edit Image"
                         >
                           <FaCrop size={14} />
@@ -134,7 +134,7 @@ const CreatePost = ({ onPostCreated }) => {
                         <button 
                           type="button" 
                           onClick={() => removeImage(index)}
-                          className="bg-black/60 backdrop-blur-md text-white rounded-full p-2 hover:bg-red-500 transition-colors"
+                          className="bg-surface/80 backdrop-blur-md text-text-main rounded-full p-2 hover:bg-red-500 transition-colors"
                           title="Remove Image"
                         >
                           <FaTimes size={14} />
@@ -145,9 +145,9 @@ const CreatePost = ({ onPostCreated }) => {
                 </div>
               )}
 
-              <div className="flex justify-between items-center mt-2 border-t border-slate-800 pt-4">
+              <div className="flex justify-between items-center mt-2 border-t border-border-main pt-4">
                 <div className="flex gap-2">
-                  <label className="cursor-pointer text-slate-400 hover:text-accent p-2 rounded-full hover:bg-accent/10 transition-all flex items-center gap-2 text-sm font-medium">
+                  <label className="cursor-pointer text-text-muted hover:text-accent p-2 rounded-full hover:bg-accent/10 transition-all flex items-center gap-2 text-sm font-medium">
                     <FaImage size={20} />
                     <span className="hidden sm:inline">Photo</span>
                     <input 
@@ -168,7 +168,7 @@ const CreatePost = ({ onPostCreated }) => {
                       setContent('');
                       setTitle('');
                     }}
-                    className="text-slate-400 hover:text-white px-4 text-sm font-medium transition-colors"
+                    className="text-text-muted hover:text-text-main px-4 text-sm font-medium transition-colors"
                   >
                     Cancel
                   </button>

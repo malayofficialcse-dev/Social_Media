@@ -561,11 +561,11 @@ const Chat = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-73px)] bg-dark">
+    <div className="flex h-[calc(100vh-73px)] bg-bg-main">
       {/* Image Cropper Modal */}
       {imageSrc && (
         <div className="fixed inset-0 z-[60] bg-black/80 flex flex-col items-center justify-center p-4">
-          <div className="relative w-full max-w-2xl h-[60vh] bg-dark rounded-lg overflow-hidden mb-4">
+          <div className="relative w-full max-w-2xl h-[60vh] bg-surface rounded-lg overflow-hidden mb-4">
             <Cropper
               image={imageSrc}
               crop={crop}
@@ -588,7 +588,7 @@ const Chat = () => {
                 max={3}
                 step={0.1}
                 onChange={(e) => setZoom(e.target.value)}
-                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                className="w-full h-2 bg-text-muted/20 rounded-lg appearance-none cursor-pointer"
               />
             </div>
             <div className="flex gap-4 items-center">
@@ -600,7 +600,7 @@ const Chat = () => {
                 max={360}
                 step={1}
                 onChange={(e) => setRotation(e.target.value)}
-                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                className="w-full h-2 bg-text-muted/20 rounded-lg appearance-none cursor-pointer"
               />
             </div>
             <div className="flex justify-between gap-4 mt-2">
@@ -622,24 +622,24 @@ const Chat = () => {
       )}
 
       {/* Chat List Sidebar */}
-      <div className={`${selectedChat ? 'hidden md:block' : 'block'} w-full md:w-80 border-r border-slate-800 overflow-y-auto`}>
-        <div className="p-4 border-b border-slate-800 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-white">Messages</h2>
+      <div className={`${selectedChat ? 'hidden md:block' : 'block'} w-full md:w-80 border-r border-border-main overflow-y-auto bg-surface`}>
+        <div className="p-4 border-b border-border-main flex justify-between items-center bg-surface sticky top-0 z-10">
+          <h2 className="text-xl font-bold text-text-main">Messages</h2>
           <button 
             onClick={() => setShowCreateGroup(true)}
-            className="text-accent hover:text-white transition-colors p-2"
+            className="text-accent hover:text-accent-hover transition-colors p-2"
             title="Create Group"
           >
             <FaPlus size={20} />
           </button>
         </div>
-        <div className="divide-y divide-slate-800">
+        <div className="divide-y divide-border-main">
           {chatList.map((chatUser) => (
             <div
               key={chatUser._id}
               onClick={() => setSelectedChat(chatUser)}
-              className={`p-4 cursor-pointer hover:bg-slate-800 transition-colors ${
-                selectedChat?._id === chatUser._id ? 'bg-slate-800' : ''
+              className={`p-4 cursor-pointer hover:bg-bg-main transition-colors ${
+                selectedChat?._id === chatUser._id ? 'bg-bg-main' : ''
               }`}
             >
               <div className="flex items-center gap-3">
@@ -647,15 +647,15 @@ const Chat = () => {
                   <img
                     src={chatUser.profileImage || `https://ui-avatars.com/api/?name=${chatUser.username}&background=random`}
                     alt={chatUser.username}
-                    className="w-12 h-12 rounded-full object-cover"
+                    className="w-12 h-12 rounded-full object-cover border border-border-main"
                   />
                   {isUserOnline(chatUser._id) && (
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-dark rounded-full"></span>
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-surface rounded-full"></span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className="font-medium text-white truncate">{chatUser.username}</p>
+                    <p className="font-medium text-text-main truncate">{chatUser.username}</p>
                     {chatUser.unreadCount > 0 && (
                       <span className="bg-accent text-white text-xs font-bold rounded-full px-2 py-0.5 ml-2">
                         {chatUser.unreadCount > 9 ? '9+' : chatUser.unreadCount}
@@ -663,33 +663,33 @@ const Chat = () => {
                     )}
                   </div>
                   {chatUser.lastMessage ? (
-                    <p className="text-xs text-slate-400 truncate">
+                    <p className="text-xs text-text-muted truncate">
                       {chatUser.lastMessage.senderId === user._id ? 'You: ' : ''}
                       {chatUser.lastMessage.content || 'Sent an image'}
                     </p>
                   ) : (
-                    <p className="text-xs text-slate-500">No messages yet</p>
+                    <p className="text-xs text-text-muted opacity-60">No messages yet</p>
                   )}
                 </div>
               </div>
             </div>
           ))}
           {chatList.length === 0 && (
-            <p className="text-center text-slate-500 p-4">No chats available. Follow users to start chatting!</p>
+            <p className="text-center text-text-muted p-4">No chats available. Follow users to start chatting!</p>
           )}
         </div>
       </div>
 
       {/* Chat Window */}
-      <div className={`${selectedChat ? 'block' : 'hidden md:block'} flex-1 flex flex-col`}>
+      <div className={`${selectedChat ? 'block' : 'hidden md:block'} flex-1 flex flex-col bg-bg-main`}>
         {selectedChat ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between gap-3">
-              <div onClick={() => selectedChat.isGroup && setShowGroupInfo(true)} className={`flex items-center gap-3 flex-1 min-w-0 ${selectedChat.isGroup ? 'cursor-pointer hover:bg-slate-800/50 p-2 rounded transition-colors' : ''}`}>
+            <div className="p-4 border-b border-border-main flex items-center justify-between gap-3 bg-surface">
+              <div onClick={() => selectedChat.isGroup && setShowGroupInfo(true)} className={`flex items-center gap-3 flex-1 min-w-0 ${selectedChat.isGroup ? 'cursor-pointer hover:bg-bg-main/50 p-2 rounded transition-colors' : ''}`}>
                 <button
                     onClick={(e) => { e.stopPropagation(); setSelectedChat(null); }}
-                    className="md:hidden text-slate-400 hover:text-white mr-2"
+                    className="md:hidden text-text-muted hover:text-text-main mr-2"
                 >
                     <FaArrowLeft size={20} />
                 </button>
@@ -697,21 +697,21 @@ const Chat = () => {
                     <img
                     src={selectedChat.profileImage || `https://ui-avatars.com/api/?name=${selectedChat.username}&background=random`}
                     alt={selectedChat.username}
-                    className="w-10 h-10 rounded-full object-cover"
+                    className="w-10 h-10 rounded-full object-cover border border-border-main"
                     />
                     {!selectedChat.isGroup && isUserOnline(selectedChat._id) && (
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-dark rounded-full"></span>
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-surface rounded-full"></span>
                     )}
                 </div>
                 <div>
-                    <p className="font-medium text-white flex items-center gap-2">
+                    <p className="font-medium text-text-main flex items-center gap-2">
                         {selectedChat.username}
-                        {selectedChat.isGroup && <span className="text-xs bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">Group</span>}
+                        {selectedChat.isGroup && <span className="text-xs bg-bg-main px-1.5 py-0.5 rounded text-text-muted">Group</span>}
                     </p>
                     {typing ? (
                       <p className="text-[10px] text-accent font-medium animate-pulse">typing...</p>
                     ) : (
-                      <p className="text-[10px] text-slate-400 font-medium">
+                      <p className="text-[10px] text-text-muted font-medium">
                         {selectedChat.isGroup 
                           ? `${selectedChat.members?.length || 0} members` 
                           : isUserOnline(selectedChat._id) 
@@ -730,14 +730,14 @@ const Chat = () => {
                   <>
                     <button 
                       onClick={() => handleStartCall('audio')}
-                      className="text-slate-400 hover:text-accent p-2 transition-colors"
+                      className="text-text-muted hover:text-accent p-2 transition-colors"
                       title="Voice Call"
                     >
                       <FaPhoneAlt size={18} />
                     </button>
                     <button 
                       onClick={() => handleStartCall('video')}
-                      className="text-slate-400 hover:text-accent p-2 transition-colors"
+                      className="text-text-muted hover:text-accent p-2 transition-colors"
                       title="Video Call"
                     >
                       <FaVideo size={20} />
@@ -745,7 +745,7 @@ const Chat = () => {
                   </>
                 )}
                 {selectedChat.isGroup && (
-                    <button onClick={() => setShowGroupInfo(true)} className="text-slate-400 hover:text-white p-2">
+                    <button onClick={() => setShowGroupInfo(true)} className="text-text-muted hover:text-text-main p-2">
                         <FaInfoCircle size={20} />
                     </button>
                 )}
@@ -753,13 +753,13 @@ const Chat = () => {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col-reverse">
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col-reverse bg-bg-main">
               <div ref={messagesEndRef} />
               {loading ? (
-                <p className="text-center text-slate-500">Loading messages...</p>
+                <p className="text-center text-text-muted">Loading messages...</p>
               ) : (
                 messages
-                .filter(m => !m.deletedBy.includes(user._id)) // Filter hidden messages
+                .filter(m => m && !m.deletedBy?.includes(user._id)) // Filter hidden messages
                 .map((message) => (
                   <div
                     key={message._id}
@@ -771,12 +771,12 @@ const Chat = () => {
                       onTouchEnd={handleTouchEnd}
                       className={`max-w-xs md:max-w-md lg:max-w-lg ${
                         message.sender._id === user._id
-                          ? 'bg-accent text-white'
-                          : 'bg-slate-800 text-slate-200'
-                      } rounded-lg p-3 relative select-none`}
+                          ? 'bg-accent text-white rounded-l-2xl rounded-tr-2xl'
+                          : 'bg-surface text-text-main rounded-r-2xl rounded-tl-2xl border border-border-main'
+                      } p-3 relative shadow-sm transition-all`}
                     >
                       {message.image && (
-                        <img src={message.image} alt="Message" className="rounded mb-2 max-h-60 w-full object-cover" />
+                        <img src={message.image} alt="Message" className="rounded-xl mb-2 max-h-60 w-full object-cover shadow-md" />
                       )}
                       
                       {message.audio && (
@@ -786,7 +786,7 @@ const Chat = () => {
                       )}
 
                       {message.isForwarded && (
-                        <p className="text-[10px] text-slate-400 italic mb-1 flex items-center gap-1">
+                        <p className={`text-[10px] ${message.sender._id === user._id ? 'text-white/70' : 'text-text-muted'} italic mb-1 flex items-center gap-1`}>
                           <FaArrowRight size={8} /> Forwarded
                         </p>
                       )}
@@ -798,29 +798,31 @@ const Chat = () => {
                           </p>
                       )}
 
-                      {message.content && <p className="text-sm">{message.content}</p>}
+                      {message.content && <p className="text-sm leading-relaxed">{message.content}</p>}
                       
                       {/* Reactions Display */}
                       {message.reactions && message.reactions.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1 justify-end">
+                        <div className="flex flex-wrap gap-1 mt-2">
                           {message.reactions.map((reaction, idx) => (
-                            <span key={idx} className="bg-slate-700/50 text-xs rounded-full px-1.5 py-0.5" title={reaction.user.username}>
+                            <span key={idx} className={`${message.sender._id === user._id ? 'bg-white/20' : 'bg-bg-main'} text-xs rounded-full px-1.5 py-0.5 border border-white/10`} title={reaction.user.username}>
                               {reaction.emoji}
                             </span>
                           ))}
                         </div>
                       )}
 
-                      <p className="text-xs opacity-70 mt-1">
-                        {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
-                      </p>
-                      {message.sender._id === user._id && (
-                        <div className="flex justify-end mt-1 items-center gap-1">
-                          {(!message.status || message.status === 'sent') && <FaCheck className="text-white text-sm" />}
-                          {message.status === 'delivered' && <FaCheckDouble className="text-white text-sm" />}
-                          {message.status === 'read' && <FaCheckDouble className="text-green-400 text-sm" />}
-                        </div>
-                      )}
+                      <div className="flex items-center justify-between gap-4 mt-1.5 pt-1.5 border-t border-white/10">
+                        <p className={`text-[10px] ${message.sender._id === user._id ? 'text-white/70' : 'text-text-muted'}`}>
+                          {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
+                        </p>
+                        {message.sender._id === user._id && (
+                          <div className="flex items-center gap-0.5">
+                            {(!message.status || message.status === 'sent') && <FaCheck className="text-white/70 text-[10px]" />}
+                            {message.status === 'delivered' && <FaCheckDouble className="text-white/70 text-[10px]" />}
+                            {message.status === 'read' && <FaCheckDouble className="text-blue-300 text-[10px]" />}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))
@@ -828,123 +830,134 @@ const Chat = () => {
             </div>
 
             {/* Message Input */}
-            <form onSubmit={sendMessage} className="p-4 border-t border-slate-800">
-              {image && (
-                <div className="mb-2 relative inline-block">
-                  <img src={URL.createObjectURL(image)} alt="Preview" className="max-h-20 rounded" />
-                  <button
-                    type="button"
-                    onClick={() => setImage(null)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
-                  >
-                    <FaTimes size={12} />
-                  </button>
-                </div>
-              )}
-              <div className="flex gap-2 items-center relative">
-                <label className="cursor-pointer text-slate-400 hover:text-accent p-2">
-                  <FaImage size={20} />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </label>
-                
-                {/* Emoji Picker */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="text-slate-400 hover:text-accent p-2"
-                  >
-                    <FaSmile size={20} />
-                  </button>
-                  {showEmojiPicker && (
-                    <div className="absolute bottom-12 left-0 z-50">
-                      <EmojiPicker
-                        onEmojiClick={(emojiObject) => {
-                          setNewMessage(prev => prev + emojiObject.emoji);
-                          setShowEmojiPicker(false);
-                        }}
-                        theme="dark"
-                        width={300}
-                        height={400}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {isRecording ? (
-                   <div className="flex-1 flex items-center gap-4 bg-slate-800 rounded-full px-4 py-2">
-                     <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                     <span className="text-white font-mono flex-1">{formatTime(recordingDuration)}</span>
-                     <button 
-                       type="button" 
-                       onClick={cancelRecording}
-                       className="text-slate-400 hover:text-red-500"
-                     >
-                       <FaTrash size={18} />
-                     </button>
-                     <button 
-                       type="button" 
-                       onClick={stopRecording}
-                       className="text-red-500 hover:text-red-400"
-                     >
-                       <FaStop size={20} />
-                     </button>
-                   </div>
-                ) : audioBlob ? (
-                  <div className="flex-1 flex items-center gap-3 bg-slate-800 rounded-full px-4 py-2">
-                    <audio src={URL.createObjectURL(audioBlob)} controls className="h-6 w-full max-w-[200px]" />
-                    <button 
-                       type="button" 
-                       onClick={cancelRecording}
-                       className="text-red-500 hover:text-red-400 ml-2"
+            <div className="p-4 bg-surface border-t border-border-main">
+              <form onSubmit={sendMessage} className="max-w-4xl mx-auto">
+                {image && (
+                  <div className="mb-3 relative inline-block">
+                    <img src={URL.createObjectURL(image)} alt="Preview" className="max-h-32 rounded-xl shadow-lg border border-border-main" />
+                    <button
+                      type="button"
+                      onClick={() => setImage(null)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-lg hover:bg-red-600 transition-colors"
                     >
-                      <FaTrash size={18} />
+                      <FaTimes size={12} />
                     </button>
                   </div>
-                ) : (
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={handleTyping}
-                    placeholder="Type a message..."
-                    className="flex-1 bg-slate-800 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-                  />
                 )}
-                
-                <div className="flex gap-2">
-                  {!isRecording && !audioBlob && !newMessage.trim() && !image ? (
-                     <button
-                       type="button"
-                       onClick={startRecording}
-                       className="bg-slate-700 text-white rounded-full p-2 hover:bg-slate-600"
-                     >
-                       <FaMicrophone size={20} />
-                     </button>
+                <div className="flex gap-2 items-center relative">
+                  <div className="flex items-center gap-1">
+                    <label className="cursor-pointer text-text-muted hover:text-accent p-2.5 rounded-xl hover:bg-bg-main transition-all">
+                      <FaImage size={20} />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                        onClick={(e) => e.target.value = null}
+                      />
+                    </label>
+                    
+                    {/* Emoji Picker */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        className="text-text-muted hover:text-accent p-2.5 rounded-xl hover:bg-bg-main transition-all"
+                      >
+                        <FaSmile size={20} />
+                      </button>
+                      {showEmojiPicker && (
+                        <div className="absolute bottom-full mb-4 left-0 z-50 animate-in slide-in-from-bottom-2 duration-200">
+                          <EmojiPicker
+                            onEmojiClick={(emojiObject) => {
+                              setNewMessage(prev => prev + emojiObject.emoji);
+                              setShowEmojiPicker(false);
+                            }}
+                            theme={localStorage.getItem('theme') || 'dark'}
+                            width={320}
+                            height={400}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {isRecording ? (
+                    <div className="flex-1 flex items-center gap-4 bg-accent/5 rounded-2xl px-5 py-3 border border-accent/20">
+                      <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></div>
+                      <span className="text-text-main font-mono text-sm font-bold flex-1">{formatTime(recordingDuration)}</span>
+                      <button 
+                        type="button" 
+                        onClick={cancelRecording}
+                        className="text-text-muted hover:text-red-500 p-1"
+                      >
+                        <FaTrash size={16} />
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={stopRecording}
+                        className="text-red-500 hover:text-red-600 p-1"
+                      >
+                        <FaStop size={18} />
+                      </button>
+                    </div>
+                  ) : audioBlob ? (
+                    <div className="flex-1 flex items-center gap-4 bg-accent/5 rounded-2xl px-5 py-2 border border-accent/20">
+                      <AudioPlayer src={URL.createObjectURL(audioBlob)} />
+                      <button 
+                        type="button" 
+                        onClick={cancelRecording}
+                        className="text-red-500 hover:text-red-600 p-1"
+                      >
+                        <FaTrash size={16} />
+                      </button>
+                    </div>
                   ) : (
-                    <button
-                      type="submit"
-                      disabled={(!newMessage.trim() && !image && !audioBlob) || isSending}
-                      className="bg-accent text-white rounded-full p-2 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isSending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <FaPaperPlane size={20} />}
-                    </button>
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={handleTyping}
+                      placeholder="Type something amazing..."
+                      className="flex-1 bg-bg-main border border-border-main rounded-2xl px-5 py-3 text-sm focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/10 transition-all text-text-main"
+                    />
                   )}
+                  
+                  <div className="flex gap-2">
+                    {!isRecording && !audioBlob && !newMessage.trim() && !image ? (
+                        <button
+                          type="button"
+                          onClick={startRecording}
+                          className="bg-bg-main text-text-muted rounded-2xl p-3 hover:text-accent hover:border-accent/30 border border-border-main transition-all"
+                        >
+                          <FaMicrophone size={20} />
+                        </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        disabled={(!newMessage.trim() && !image && !audioBlob) || isSending}
+                        className="bg-accent text-white rounded-2xl p-3.5 hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-accent/20 transition-all"
+                      >
+                        {isSending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <FaPaperPlane size={20} />}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </form>
+              </form>
+            </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
-            <div className="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center mb-4">
-              <FaPaperPlane size={40} className="text-slate-600" />
+          <div className="flex-1 flex flex-col items-center justify-center text-text-muted p-10 text-center animate-in fade-in zoom-in-95 duration-500">
+            <div className="w-24 h-24 bg-surface border border-border-main rounded-3xl flex items-center justify-center mb-6 shadow-xl">
+              <FaPaperPlane size={40} className="text-accent opacity-40 rotate-12" />
             </div>
-            <p className="text-lg font-medium">Select a chat to start messaging</p>
-            <p className="text-sm">or create a new group</p>
+            <h3 className="text-xl font-black text-text-main mb-2">Your Inbox</h3>
+            <p className="text-sm max-w-xs leading-relaxed">Select a follower to start a secure conversation or create a new group chat.</p>
+            <button 
+              onClick={() => setShowCreateGroup(true)}
+              className="mt-6 btn btn-secondary text-sm px-8"
+            >
+              Start New Group
+            </button>
           </div>
         )}
       </div>

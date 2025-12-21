@@ -10,7 +10,7 @@ import getCroppedImg from '../utils/cropImage';
 
 const Profile = () => {
   const { id } = useParams();
-  const { user: currentUser, updateProfile, fetchUser } = useAuth();
+  const { user: currentUser, fetchUser } = useAuth();
   const [profileUser, setProfileUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,7 +69,7 @@ const Profile = () => {
         }));
       }
       fetchUser();
-    } catch (error) {
+    } catch {
       toast.error("Error updating follow status");
     }
   };
@@ -92,7 +92,7 @@ const Profile = () => {
         setBackgroundImageFile(null);
         toast.success("Profile updated successfully");
       }
-    } catch (error) {
+    } catch {
       toast.error("Error updating profile");
     }
   };
@@ -165,7 +165,7 @@ const Profile = () => {
       {/* Image Cropper Modal */}
       {imageSrc && (
         <div className="fixed inset-0 z-[60] bg-black/80 flex flex-col items-center justify-center p-4">
-          <div className="relative w-full max-w-2xl h-[60vh] bg-dark rounded-lg overflow-hidden mb-4">
+          <div className="relative w-full max-w-2xl h-[60vh] bg-surface rounded-3xl overflow-hidden mb-4 border border-border-main">
             <Cropper
               image={imageSrc}
               crop={crop}
@@ -189,7 +189,7 @@ const Profile = () => {
                 step={0.1}
                 aria-labelledby="Zoom"
                 onChange={(e) => setZoom(e.target.value)}
-                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
               />
             </div>
             <div className="flex gap-4 items-center">
@@ -202,7 +202,7 @@ const Profile = () => {
                 step={1}
                 aria-labelledby="Rotation"
                 onChange={(e) => setRotation(e.target.value)}
-                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
               />
             </div>
             <div className="flex justify-between gap-4 mt-2">
@@ -224,7 +224,7 @@ const Profile = () => {
       )}
 
       <div className="relative mb-16">
-        <div className="h-48 bg-slate-700 w-full rounded-xl overflow-hidden relative group">
+        <div className="h-48 bg-bg-main w-full rounded-3xl overflow-hidden relative group border border-border-main shadow-inner">
           {/* Background Image Preview */}
           {(backgroundImageFile || profileUser.backgroundImage) && (
             <img 
@@ -250,7 +250,7 @@ const Profile = () => {
         </div>
         
         <div className="absolute -bottom-12 left-6 relative group inline-block">
-          <div className="w-32 h-32 rounded-full border-4 border-dark overflow-hidden bg-surface relative">
+          <div className="w-32 h-32 rounded-full border-4 border-surface overflow-hidden bg-bg-main relative shadow-xl">
             <img 
               src={profileImageFile ? URL.createObjectURL(profileImageFile) : (profileUser.profileImage || "https://via.placeholder.com/120")} 
               alt="Profile" 
@@ -293,11 +293,11 @@ const Profile = () => {
       </div>
 
       {isEditing && isOwnProfile ? (
-        <div className="card mb-6 animate-fade-in">
-          <h3 className="text-xl font-bold mb-4">Edit Profile Details</h3>
+        <div className="card mb-6 animate-fade-in border-border-main">
+          <h3 className="text-xl font-bold mb-4 text-text-main">Edit Profile Details</h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">Username</label>
+              <label className="block text-sm font-medium text-text-muted mb-1">Username</label>
               <input 
                 type="text" 
                 value={editForm.username}
@@ -306,7 +306,7 @@ const Profile = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">Bio</label>
+              <label className="block text-sm font-medium text-text-muted mb-1">Bio</label>
               <textarea 
                 value={editForm.bio}
                 onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
@@ -323,29 +323,29 @@ const Profile = () => {
         </div>
       ) : (
         <div className="mb-8">
-          <h1 className="text-2xl font-bold">{profileUser.username}</h1>
-          <p className="text-slate-500 text-sm mb-4">{profileUser.email}</p>
-          {profileUser.bio && <p className="text-slate-300 mb-4">{profileUser.bio}</p>}
+          <h1 className="text-2xl font-bold text-text-main">{profileUser.username}</h1>
+          <p className="text-text-muted text-sm mb-4">{profileUser.email}</p>
+          {profileUser.bio && <p className="text-text-main mb-4">{profileUser.bio}</p>}
           
-          <div className="flex gap-6 text-slate-400 text-sm">
+          <div className="flex gap-6 text-text-muted text-sm">
             <div className="flex gap-1">
-              <span className="font-bold text-white">{profileUser.following.length}</span>
+              <span className="font-bold text-text-main">{profileUser.following.length}</span>
               <span>Following</span>
             </div>
             <div className="flex gap-1">
-              <span className="font-bold text-white">{profileUser.followers.length}</span>
+              <span className="font-bold text-text-main">{profileUser.followers.length}</span>
               <span>Followers</span>
             </div>
           </div>
         </div>
       )}
 
-      <div className="border-b border-slate-800 mb-6">
+      <div className="border-b border-border-main mb-6">
         <div className="flex gap-8">
-          <button className="px-4 py-3 border-b-2 border-accent text-accent font-medium">
+          <button className="px-4 py-3 border-b-2 border-accent text-accent font-medium uppercase text-[11px] tracking-widest font-black">
             Posts
           </button>
-          <button className="px-4 py-3 text-slate-500 hover:text-white transition-colors">
+          <button className="px-4 py-3 text-text-muted hover:text-text-main transition-colors uppercase text-[11px] tracking-widest font-black">
             Likes
           </button>
         </div>
@@ -361,7 +361,7 @@ const Profile = () => {
           />
         ))}
         {posts.length === 0 && (
-          <p className="text-center text-slate-500 mt-10">No posts yet.</p>
+          <p className="text-center text-text-muted mt-10 italic">No posts yet.</p>
         )}
       </div>
     </div>

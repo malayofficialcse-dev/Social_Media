@@ -1,13 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #020617;
-  --color-secondary: #0f172a;
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
   --color-accent: #0ea5e9;
   --color-accent-hover: #0284c7;
-  --color-dark: #020617;
-  --color-surface: #0f172a;
-  --color-card: #1e293b;
+  --color-bg-main: var(--bg-main);
+  --color-surface: var(--surface);
+  --color-card: var(--card-bg);
+  --color-text-main: var(--text-main);
+  --color-text-muted: var(--text-muted);
+  --color-border-main: var(--border-main);
 
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 
@@ -29,13 +32,35 @@
   }
 }
 
+:root {
+  --primary: #020617;
+  --secondary: #0f172a;
+  --bg-main: #f8fafc;
+  --surface: #ffffff;
+  --card-bg: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-main: #e2e8f0;
+}
+
+.dark {
+  --primary: #020617;
+  --secondary: #0f172a;
+  --bg-main: #020617;
+  --surface: #0f172a;
+  --card-bg: #1e293b;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --border-main: #1e293b;
+}
+
 @layer base {
   body {
-    @apply bg-[#020617] text-slate-200 font-sans antialiased selection:bg-accent/30 selection:text-white;
+    @apply bg-bg-main text-text-main font-sans antialiased selection:bg-accent/30 selection:text-white transition-colors duration-300;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold text-white tracking-tight;
+    @apply font-semibold text-text-main tracking-tight;
   }
 }
 
@@ -49,27 +74,27 @@
   }
   
   .btn-secondary {
-    @apply bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700;
+    @apply bg-surface text-text-main hover:bg-bg-main border border-border-main;
   }
   
   .btn-outline {
-    @apply border border-slate-700 text-slate-300 hover:border-accent hover:text-accent hover:bg-accent/5;
+    @apply border border-border-main text-text-muted hover:border-accent hover:text-accent hover:bg-accent/5;
   }
 
   .glass {
-    @apply bg-slate-900/40 backdrop-blur-xl border border-white/5 shadow-2xl;
+    @apply bg-surface/60 backdrop-blur-xl border border-border-main shadow-2xl transition-colors duration-300;
   }
 
   .card {
-    @apply bg-[#0f172a] rounded-2xl border border-slate-800/50 p-6 shadow-xl transition-all duration-300 hover:border-slate-700/80;
+    @apply bg-card rounded-2xl border border-border-main p-6 shadow-xl transition-all duration-300 hover:border-accent/30;
   }
 
   .input-field {
-    @apply w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/10 transition-all;
+    @apply w-full bg-surface border border-border-main rounded-xl px-4 py-3 text-text-main placeholder-text-muted focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/10 transition-all;
   }
 
   .nav-link {
-    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all duration-200;
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-text-muted hover:text-text-main hover:bg-accent/5 transition-all duration-200;
   }
 
   .nav-link-active {
@@ -87,12 +112,15 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-700/50 rounded-full hover:bg-slate-600 transition-colors;
+  @apply bg-text-muted/20 rounded-full hover:bg-text-muted/40 transition-colors;
 }
 
 /* Premium Gradients */
 .gradient-text {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400 font-bold;
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-cyan-500 font-bold;
+}
+.dark .gradient-text {
+  @apply from-blue-400 to-cyan-400;
 }
 
 .gradient-border {

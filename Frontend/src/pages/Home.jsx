@@ -39,8 +39,8 @@ const Home = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center pt-20 animate-in fade-in duration-700">
-        <div className="w-12 h-12 border-4 border-accent/20 border-t-accent rounded-full animate-spin mb-4"></div>
-        <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-xs">Syncing Feed</p>
+        <div className="w-12 h-12 border-4 border-accent/20 border-t-accent rounded-full animate-spin mb-4 shadow-lg shadow-accent/10"></div>
+        <p className="text-text-muted font-bold uppercase tracking-[0.2em] text-xs">Syncing Feed</p>
       </div>
     );
   }
@@ -59,8 +59,8 @@ const Home = () => {
           />
         ))}
         {posts.length === 0 && (
-          <div className="card text-center py-20 border-dashed border-white/5">
-            <p className="text-slate-500 font-medium">No one has shared anything yet. Why not be the first?</p>
+          <div className="card text-center py-20 border-dashed border-border-main">
+            <p className="text-text-muted font-medium">No one has shared anything yet. Why not be the first?</p>
           </div>
         )}
       </div>
