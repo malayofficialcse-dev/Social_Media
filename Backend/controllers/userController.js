@@ -273,14 +273,28 @@ export const toggleGhostMode = async (req, res) => {
 export const seedSampleAnalytics = async (req, res) => {
   try {
     const userId = req.user._id;
-    const otherUsers = await User.find({ _id: { $ne: userId } }).limit(10);
+    let otherUsers = await User.find({ _id: { $ne: userId } }).limit(10);
     const myPosts = await Post.find({ author_id: userId }).limit(5);
     
-    if (otherUsers.length === 0) {
-      return res.status(400).json({ message: "Need other users to seed data" });
+    // Auto-create dummy users if none exist (Fixes fresh deploy empty graph issue)
+    if (otherUsers.length < 3) {
+      const hashedPassword = await bcrypt.hash("123456", 10);
+      const dummyUsers = Array.from({ length: 5 }).map((_, i) => ({
+        username: `visitor_${Math.random().toString(36).substr(2, 5)}`,
+        email: `visitor_${Date.now()}_${i}@example.com`,
+        password: hashedPassword,
+        isVerified: Math.random() > 0.7,
+        profileImage: `https://api.dicebear.com/7.x/avataaars/svg?seed=${i}`
+      }));
+      const createdUsers = await User.insertMany(dummyUsers);
+      otherUsers = [...otherUsers, ...createdUsers];
     }
 
-    const types = ['profile_visit', 'post_like', 'post_comment', 'post_repost'];
+    let types = ['profile_visit'];
+    if (myPosts.length > 0) {
+      types = [...types, 'post_like', 'post_comment', 'post_repost'];
+    }
+
     const locations = [
       { city: 'New York', country: 'United States', countryCode: 'US', lat: 40.7128, lng: -74.0060 },
       { city: 'London', country: 'United Kingdom', countryCode: 'GB', lat: 51.5074, lng: -0.1278 },
@@ -288,13 +302,15 @@ export const seedSampleAnalytics = async (req, res) => {
       { city: 'Tokyo', country: 'Japan', countryCode: 'JP', lat: 35.6762, lng: 139.6503 },
       { city: 'Paris', country: 'France', countryCode: 'FR', lat: 48.8566, lng: 2.3522 },
       { city: 'Berlin', country: 'Germany', countryCode: 'DE', lat: 52.5200, lng: 13.4050 },
-      { city: 'Sydney', country: 'Australia', countryCode: 'AU', lat: -33.8688, lng: 151.2093 }
+      { city: 'Sydney', country: 'Australia', countryCode: 'AU', lat: -33.8688, lng: 151.2093 },
+      { city: 'Toronto', country: 'Canada', countryCode: 'CA', lat: 43.6532, lng: -79.3832 },
+      { city: 'Dubai', country: 'UAE', countryCode: 'AE', lat: 25.2048, lng: 55.2708 }
     ];
 
     const analyticsToCreate = [];
     
-    // Create 30 random events for more density
-    for (let i = 0; i < 30; i++) {
+    // Create 50 random events for rich data
+    for (let i = 0; i < 50; i++) {
       const type = types[Math.floor(Math.random() * types.length)];
       const visitor = otherUsers[Math.floor(Math.random() * otherUsers.length)];
       const loc = locations[Math.floor(Math.random() * locations.length)];
@@ -304,9 +320,9 @@ export const seedSampleAnalytics = async (req, res) => {
         type,
         userId: visitor._id,
         targetUserId: userId,
-        postId: type.startsWith('post') ? post?._id : null,
+        postId: (type.startsWith('post') && post) ? post._id : null,
         location: loc,
-        createdAt: new Date(Date.now() - Math.floor(Math.random() * 25 * 24 * 60 * 60 * 1000))
+        createdAt: new Date(Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000))
       });
 
       // Update actual models for consistency
@@ -317,12 +333,19 @@ export const seedSampleAnalytics = async (req, res) => {
         if (!post.reposts.includes(visitor._id)) post.reposts.push(visitor._id);
         await post.save();
       } else if (type === 'profile_visit') {
-        const me = await User.findById(userId);
-        if (!me.followers.includes(visitor._id)) {
-           me.followers.push(visitor._id);
-           await me.save();
-           visitor.following.push(userId);
-           await visitor.save();
+        // Randomly follow
+        if (Math.random() > 0.7) {
+           const me = await User.findById(userId);
+           if (!me.followers.includes(visitor._id)) {
+              me.followers.push(visitor._id);
+              await me.save();
+              
+              const v = await User.findById(visitor._id);
+              if (v && !v.following.includes(userId)) {
+                 v.following.push(userId);
+                 await v.save();
+              }
+           }
         }
       }
     }

@@ -18,6 +18,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy (essential for deployment)
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {

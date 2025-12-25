@@ -16,7 +16,7 @@ export const getLocation = async (ip) => {
       return mocks[Math.floor(Math.random() * mocks.length)];
     }
 
-    const { data } = await axios.get(`https://ipapi.co/${ip}/json/`);
+    const { data } = await axios.get(`https://ipapi.co/${ip}/json/`, { timeout: 3000 });
     return {
       city: data.city,
       country: data.country_name,
