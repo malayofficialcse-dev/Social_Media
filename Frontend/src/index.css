@@ -12,6 +12,15 @@
   --color-text-muted: var(--text-muted);
   --color-border-main: var(--border-main);
 
+  --radius-xs: 3px;
+  --radius-sm: 3px;
+  --radius-md: 3px;
+  --radius-lg: 3px;
+  --radius-xl: 3px;
+  --radius-2xl: 3px;
+  --radius-3xl: 3px;
+  --radius-4xl: 3px;
+
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 
   --animate-fade-in: fadeIn 0.5s ease-out;
@@ -66,7 +75,7 @@
 
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-95;
+    @apply px-4 py-2 rounded-md font-medium transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-95;
   }
   
   .btn-primary {
@@ -112,7 +121,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-text-muted/20 rounded-full hover:bg-text-muted/40 transition-colors;
+  @apply bg-text-muted/20 rounded-md hover:bg-text-muted/40 transition-colors;
 }
 
 /* Premium Gradients */
@@ -125,14 +134,14 @@
 
 .gradient-border {
   position: relative;
-  border-radius: 1rem;
+  border-radius: 3px;
 }
 
 .gradient-border::before {
   content: "";
   position: absolute;
   inset: -1px;
-  border-radius: 1.1rem;
+  border-radius: 4px;
   padding: 1px;
   background: linear-gradient(45deg, #0ea5e9, #22d3ee, #0ea5e9);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -197,7 +206,7 @@
   animation: glitch 0.5s ease-in-out infinite;
   pointer-events: none;
 }.glass-premium {
-  @apply bg-surface/40 backdrop-blur-3xl border border-border-main/20 rounded-[2.5rem] p-6 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300;
+  @apply bg-surface/40 backdrop-blur-3xl border border-border-main/20 rounded-md p-6 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300;
 }
 
 /* Focus Mode Cinematic Feed */
