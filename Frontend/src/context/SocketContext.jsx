@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useContext, useRef } from 'react';
+import { createContext, useState, useEffect, useContext, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import io from 'socket.io-client';
 
@@ -11,14 +11,14 @@ const SocketContext = createContext();
 export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
-  const socketRef = useRef(null);
+  const [socket, setSocket] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const { user } = useAuth();
 
   useEffect(() => {
     if (user) {
       const newSocket = io(ENDPOINT);
-      socketRef.current = newSocket;
+      setSocket(newSocket);
 
       newSocket.emit("setup", user);
 
@@ -28,19 +28,24 @@ export const SocketProvider = ({ children }) => {
 
       return () => {
         newSocket.close();
-        socketRef.current = null;
+        setSocket(null);
       };
     } else {
-      if (socketRef.current) {
-        socketRef.current.close();
-        socketRef.current = null;
-      }
+      setSocket(prev => {
+        if (prev) prev.close();
+        return null;
+      });
       setOnlineUsers([]);
     }
   }, [user]);
 
+  const value = useMemo(() => ({
+    socket,
+    onlineUsers
+  }), [socket, onlineUsers]);
+
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current, onlineUsers }}>
+    <SocketContext.Provider value={value}>
       {children}
     </SocketContext.Provider>
   );

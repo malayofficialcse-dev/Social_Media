@@ -53,6 +53,32 @@ const storySchema = mongoose.Schema(
     isHighlight: {
       type: Boolean,
       default: false,
+    },
+    likes: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    }],
+    widget: {
+      type: { type: String, enum: ["poll", "countdown", "qa"] },
+      poll: {
+        question: String,
+        options: [{
+          text: String,
+          votes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
+        }]
+      },
+      countdown: {
+        targetDate: Date,
+        label: String
+      },
+      qa: {
+        question: String,
+        answers: [{
+          user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+          text: String,
+          createdAt: { type: Date, default: Date.now }
+        }]
+      }
     }
   },
   {

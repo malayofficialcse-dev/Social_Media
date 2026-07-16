@@ -8,7 +8,9 @@ import {
   likePost,
   unlikePost,
   repostPost,
-  getUserPosts
+  getUserPosts,
+  votePoll,
+  answerQA
 } from "../controllers/postController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { postValidator } from "../validators/postValidators.js";
@@ -32,5 +34,7 @@ router.route("/:id")
 router.put("/:id/like", protect, likePost);
 router.put("/:id/unlike", protect, unlikePost);
 router.post("/:id/repost", protect, repostPost);
+router.post("/:id/vote", protect, votePoll);
+router.post("/:id/answer-qa", protect, answerQA);
 
 export default router;

@@ -111,7 +111,7 @@ export const allMessages = asyncHandler(async (req, res) => {
 // @access  Private
 export const getChatList = asyncHandler(async (req, res) => {
   // Get followers and following
-  const user = await User.findById(req.user._id).populate("followers following", "username profileImage email");
+  const user = await User.findById(req.user._id).populate("followers following", "username profileImage email lastSeen");
   
   // Combine unique users
   const chatUsersMap = new Map();

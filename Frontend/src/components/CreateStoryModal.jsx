@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaTimes, FaMusic, FaFont, FaImage, FaPlay, FaPause } from 'react-icons/fa';
+import { FaTimes, FaMusic, FaFont, FaImage, FaPlay, FaPause, FaPoll, FaHourglassEnd, FaQuestion, FaPlus } from 'react-icons/fa';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 
@@ -19,6 +19,14 @@ const CreateStoryModal = ({ onClose, onSuccess }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+
+  // Widget State
+  const [activeWidget, setActiveWidget] = useState(null);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [countdownDate, setCountdownDate] = useState('');
+  const [countdownLabel, setCountdownLabel] = useState('');
+  const [qaQuestion, setQaQuestion] = useState('');
 
   const handleMediaSelect = (e) => {
     const file = e.target.files[0];
@@ -75,6 +83,24 @@ const CreateStoryModal = ({ onClose, onSuccess }) => {
       formData.append('song', songFile);
       formData.append('audioStart', startTime);
       formData.append('audioDuration', 30); // Max cap
+    }
+
+    if (activeWidget) {
+      let widgetData = { type: activeWidget };
+      if (activeWidget === 'poll') {
+        widgetData.poll = { 
+          question: pollQuestion || "Poll", 
+          options: pollOptions.filter(o => o.trim()).map(o => ({ text: o, votes: [] })) 
+        };
+      } else if (activeWidget === 'countdown') {
+        widgetData.countdown = { 
+          targetDate: countdownDate, 
+          label: countdownLabel 
+        };
+      } else if (activeWidget === 'qa') {
+        widgetData.qa = { question: qaQuestion };
+      }
+      formData.append('widget', JSON.stringify(widgetData));
     }
 
     try {
@@ -144,6 +170,46 @@ const CreateStoryModal = ({ onClose, onSuccess }) => {
                  >
                    <FaFont /> Add Text
                  </button>
+
+                  {/* Widget Toggles */}
+                  <div className="flex gap-2">
+                    <button onClick={() => setActiveWidget(activeWidget === 'poll' ? null : 'poll')} className={`flex-1 flex items-center justify-center gap-2 p-2 rounded text-xs font-bold transition-all ${activeWidget === 'poll' ? 'bg-accent text-white' : 'bg-slate-700 text-slate-300'}`}>
+                      <FaPoll /> Poll
+                    </button>
+                    <button onClick={() => setActiveWidget(activeWidget === 'countdown' ? null : 'countdown')} className={`flex-1 flex items-center justify-center gap-2 p-2 rounded text-xs font-bold transition-all ${activeWidget === 'countdown' ? 'bg-amber-500 text-white' : 'bg-slate-700 text-slate-300'}`}>
+                      <FaHourglassEnd /> Timer
+                    </button>
+                    <button onClick={() => setActiveWidget(activeWidget === 'qa' ? null : 'qa')} className={`flex-1 flex items-center justify-center gap-2 p-2 rounded text-xs font-bold transition-all ${activeWidget === 'qa' ? 'bg-purple-500 text-white' : 'bg-slate-700 text-slate-300'}`}>
+                      <FaQuestion /> Q&A
+                    </button>
+                  </div>
+
+                  {activeWidget && (
+                    <div className="bg-slate-900/50 p-3 rounded-lg border border-white/10 space-y-3">
+                      {activeWidget === 'poll' && (
+                        <>
+                          <input placeholder="Poll Question" value={pollQuestion} onChange={(e) => setPollQuestion(e.target.value)} className="w-full bg-transparent border-b border-slate-600 p-1 text-white text-sm focus:outline-none focus:border-accent" />
+                          {pollOptions.map((opt, i) => (
+                            <input key={i} placeholder={`Option ${i+1}`} value={opt} onChange={(e) => {
+                               const newO = [...pollOptions];
+                               newO[i] = e.target.value;
+                               setPollOptions(newO);
+                            }} className="w-full bg-slate-700/50 p-2 rounded text-xs text-white outline-none" />
+                          ))}
+                          <button onClick={() => setPollOptions([...pollOptions, ''])} className="text-[10px] text-accent uppercase font-black">+ Add Option</button>
+                        </>
+                      )}
+                      {activeWidget === 'countdown' && (
+                        <div className="space-y-2">
+                           <input type="datetime-local" value={countdownDate} onChange={(e) => setCountdownDate(e.target.value)} className="w-full bg-slate-700 p-2 rounded text-xs text-white outline-none" />
+                           <input placeholder="Label" value={countdownLabel} onChange={(e) => setCountdownLabel(e.target.value)} className="w-full bg-slate-700 p-2 rounded text-xs text-white outline-none" />
+                        </div>
+                      )}
+                      {activeWidget === 'qa' && (
+                        <input placeholder="Ask something..." value={qaQuestion} onChange={(e) => setQaQuestion(e.target.value)} className="w-full bg-transparent border-b border-slate-600 p-1 text-white text-sm focus:outline-none focus:border-accent" />
+                      )}
+                    </div>
+                  )}
 
                  {showTextInput && (
                    <input 

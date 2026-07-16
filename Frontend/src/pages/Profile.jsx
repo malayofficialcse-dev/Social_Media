@@ -7,13 +7,23 @@ import PostCard from '../components/PostCard';
 import { toast } from 'react-toastify';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '../utils/cropImage';
+import VerifiedBadge from '../components/VerifiedBadge';
+import { FaCrown, FaGem, FaStar } from 'react-icons/fa';
 
 const Profile = () => {
   const { id } = useParams();
-  const { user: currentUser, updateProfile, fetchUser } = useAuth();
+  const { user: currentUser, fetchUser } = useAuth();
   const [profileUser, setProfileUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Log visit
+  useEffect(() => {
+    if (id && currentUser && id !== currentUser._id) {
+       api.post(`/users/${id}/visit`).catch(() => {});
+    }
+  }, [id, currentUser]);
+
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     username: '',
@@ -69,7 +79,7 @@ const Profile = () => {
         }));
       }
       fetchUser();
-    } catch (error) {
+    } catch {
       toast.error("Error updating follow status");
     }
   };
@@ -92,7 +102,7 @@ const Profile = () => {
         setBackgroundImageFile(null);
         toast.success("Profile updated successfully");
       }
-    } catch (error) {
+    } catch {
       toast.error("Error updating profile");
     }
   };
@@ -102,7 +112,33 @@ const Profile = () => {
   };
 
   const handlePostUpdated = (updatedPost) => {
-    setPosts(posts.map(p => p._id === updatedPost._id ? updatedPost : p));
+    setPosts(prev => prev.map(p => p._id === updatedPost._id ? updatedPost : p));
+  };
+
+  const handleUpgradeToPro = async () => {
+    try {
+      const { data } = await api.put('/users/upgrade-pro');
+      if (data.success) {
+        toast.success("Welcome to the Elite! You are now a Pro member.");
+        setProfileUser(data.user);
+        fetchUser(); // Update global auth user
+      }
+    } catch {
+      toast.error("Failed to upgrade. Please try again later.");
+    }
+  };
+
+  const handleUpdateTheme = async (color) => {
+    try {
+      const { data } = await api.put('/users/profile-theme', { accentColor: color, applied: true });
+      if (data.success) {
+        toast.success(`Theme updated to ${color}!`);
+        setProfileUser(data.user);
+        fetchUser(); // Update global auth user
+      }
+    } catch {
+      toast.error("Failed to update theme.");
+    }
   };
 
   // Crop Handlers
@@ -159,13 +195,14 @@ const Profile = () => {
   if (!profileUser) return <div className="text-center pt-10">User not found</div>;
 
   const isFollowing = profileUser.followers.some(f => f._id === currentUser?._id);
+  const themeClass = profileUser.isPro && profileUser.profileTheme?.applied ? `theme-${profileUser.profileTheme.accentColor}` : '';
 
   return (
-    <div>
+    <div className={themeClass}>
       {/* Image Cropper Modal */}
       {imageSrc && (
         <div className="fixed inset-0 z-[60] bg-black/80 flex flex-col items-center justify-center p-4">
-          <div className="relative w-full max-w-2xl h-[60vh] bg-dark rounded-lg overflow-hidden mb-4">
+          <div className="relative w-full max-w-2xl h-[60vh] bg-surface rounded-3xl overflow-hidden mb-4 border border-border-main">
             <Cropper
               image={imageSrc}
               crop={crop}
@@ -189,7 +226,7 @@ const Profile = () => {
                 step={0.1}
                 aria-labelledby="Zoom"
                 onChange={(e) => setZoom(e.target.value)}
-                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
               />
             </div>
             <div className="flex gap-4 items-center">
@@ -202,7 +239,7 @@ const Profile = () => {
                 step={1}
                 aria-labelledby="Rotation"
                 onChange={(e) => setRotation(e.target.value)}
-                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
               />
             </div>
             <div className="flex justify-between gap-4 mt-2">
@@ -224,7 +261,7 @@ const Profile = () => {
       )}
 
       <div className="relative mb-16">
-        <div className="h-48 bg-slate-700 w-full rounded-xl overflow-hidden relative group">
+        <div className="h-48 bg-bg-main w-full rounded-3xl overflow-hidden relative group border border-border-main shadow-inner">
           {/* Background Image Preview */}
           {(backgroundImageFile || profileUser.backgroundImage) && (
             <img 
@@ -250,7 +287,7 @@ const Profile = () => {
         </div>
         
         <div className="absolute -bottom-12 left-6 relative group inline-block">
-          <div className="w-32 h-32 rounded-full border-4 border-dark overflow-hidden bg-surface relative">
+          <div className={`w-32 h-32 rounded-full border-4 border-surface overflow-hidden bg-bg-main relative shadow-xl ${profileUser.isPro ? 'pro-frame-neon' : ''}`}>
             <img 
               src={profileImageFile ? URL.createObjectURL(profileImageFile) : (profileUser.profileImage || "https://via.placeholder.com/120")} 
               alt="Profile" 
@@ -273,7 +310,15 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="flex justify-end pt-4">
+        <div className="flex justify-end pt-4 gap-3">
+          {isOwnProfile && !profileUser.isPro && (
+            <button 
+              onClick={handleUpgradeToPro}
+              className="btn bg-gradient-to-r from-amber-400 to-yellow-600 text-white font-black rounded-full shadow-lg shadow-yellow-500/20 hover:scale-105 transition-all flex items-center gap-2"
+            >
+              <FaCrown /> Upgrade to Pro
+            </button>
+          )}
           {isOwnProfile ? (
             <button 
               onClick={() => setIsEditing(!isEditing)}
@@ -293,20 +338,23 @@ const Profile = () => {
       </div>
 
       {isEditing && isOwnProfile ? (
-        <div className="card mb-6 animate-fade-in">
-          <h3 className="text-xl font-bold mb-4">Edit Profile Details</h3>
+        <div className="card mb-6 animate-fade-in border-border-main">
+          <h3 className="text-xl font-bold mb-4 text-text-main">Edit Profile Details</h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">Username</label>
-              <input 
-                type="text" 
-                value={editForm.username}
-                onChange={(e) => setEditForm({...editForm, username: e.target.value})}
-                className="input-field"
-              />
+              <label className="block text-sm font-medium text-text-muted mb-1">Username</label>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="text" 
+                  value={editForm.username}
+                  onChange={(e) => setEditForm({...editForm, username: e.target.value})}
+                  className="input-field"
+                />
+                {profileUser.isVerified && <VerifiedBadge size={16} />}
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">Bio</label>
+              <label className="block text-sm font-medium text-text-muted mb-1">Bio</label>
               <textarea 
                 value={editForm.bio}
                 onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
@@ -314,8 +362,37 @@ const Profile = () => {
                 rows="3"
               />
             </div>
+
+            {profileUser.isPro && (
+              <div className="pt-4 border-t border-border-main">
+                <label className="block text-sm font-black uppercase tracking-widest text-accent mb-3">Elite Profile Theme</label>
+                <div className="flex gap-4">
+                  {[
+                    { id: 'gold', name: 'Royal Gold', color: 'bg-amber-400', icon: <FaCrown /> },
+                    { id: 'emerald', name: 'Deep Emerald', color: 'bg-emerald-500', icon: <FaGem /> },
+                    { id: 'rose', name: 'Rose Petal', color: 'bg-rose-500', icon: <FaStar /> },
+                    { id: '', name: 'Default Blue', color: 'bg-accent', icon: null }
+                  ].map(theme => (
+                    <button
+                      key={theme.id}
+                      onClick={() => handleUpdateTheme(theme.id)}
+                      className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${
+                        (profileUser.profileTheme?.accentColor === theme.id) 
+                        ? 'border-accent bg-accent/5 scale-105' 
+                        : 'border-border-main hover:border-accent/30'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-full ${theme.color} flex items-center justify-center text-white text-xs shadow-lg`}>
+                        {theme.icon}
+                      </div>
+                      <span className="text-[10px] font-bold uppercase">{theme.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pt-4">
               <button onClick={() => setIsEditing(false)} className="btn btn-secondary">Cancel</button>
               <button onClick={handleUpdateProfile} className="btn btn-primary">Save Changes</button>
             </div>
@@ -323,29 +400,39 @@ const Profile = () => {
         </div>
       ) : (
         <div className="mb-8">
-          <h1 className="text-2xl font-bold">{profileUser.username}</h1>
-          <p className="text-slate-500 text-sm mb-4">{profileUser.email}</p>
-          {profileUser.bio && <p className="text-slate-300 mb-4">{profileUser.bio}</p>}
+          <div className="flex items-center gap-4 mb-8">
+            <h1 className="text-3xl font-black text-text-main flex items-center gap-3">
+              {profileUser.username}
+              {profileUser.isVerified && <VerifiedBadge size={20} />}
+            </h1>
+            {profileUser.isPro && (
+              <span className="bg-gradient-to-r from-amber-400 to-yellow-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg flex items-center gap-1.5">
+                <FaCrown /> Elite Member
+              </span>
+            )}
+          </div>
+          <p className="text-text-muted text-sm mb-4">{profileUser.email}</p>
+          {profileUser.bio && <p className="text-text-main mb-4">{profileUser.bio}</p>}
           
-          <div className="flex gap-6 text-slate-400 text-sm">
+          <div className="flex gap-6 text-text-muted text-sm">
             <div className="flex gap-1">
-              <span className="font-bold text-white">{profileUser.following.length}</span>
+              <span className="font-bold text-text-main">{profileUser.following.length}</span>
               <span>Following</span>
             </div>
             <div className="flex gap-1">
-              <span className="font-bold text-white">{profileUser.followers.length}</span>
+              <span className="font-bold text-text-main">{profileUser.followers.length}</span>
               <span>Followers</span>
             </div>
           </div>
         </div>
       )}
 
-      <div className="border-b border-slate-800 mb-6">
+      <div className="border-b border-border-main mb-6">
         <div className="flex gap-8">
-          <button className="px-4 py-3 border-b-2 border-accent text-accent font-medium">
+          <button className="px-4 py-3 border-b-2 border-accent text-accent font-medium uppercase text-[11px] tracking-widest font-black">
             Posts
           </button>
-          <button className="px-4 py-3 text-slate-500 hover:text-white transition-colors">
+          <button className="px-4 py-3 text-text-muted hover:text-text-main transition-colors uppercase text-[11px] tracking-widest font-black">
             Likes
           </button>
         </div>
@@ -361,7 +448,7 @@ const Profile = () => {
           />
         ))}
         {posts.length === 0 && (
-          <p className="text-center text-slate-500 mt-10">No posts yet.</p>
+          <p className="text-center text-text-muted mt-10 italic">No posts yet.</p>
         )}
       </div>
     </div>
